@@ -15,7 +15,7 @@ func main() {
 	// 加载关于 Harbor 相关的 Flags
 	h.HarborConnFlags()
 	pflag.Parse()
-	collector.HarborHealthGatherer(&h)
+	collector.HarborHealthCollector(&h)
 
 	// 为所有 metrics 注册一个 Collector
 	// 为 HarborHealthStatus 这个 metrics 注册一个 Collector
