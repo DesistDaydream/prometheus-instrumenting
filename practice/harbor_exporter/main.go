@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/DesistDaydream/exporter/practice/harbor_exporter/collector"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
 )
@@ -17,9 +16,8 @@ func main() {
 	pflag.Parse()
 	collector.HarborHealthCollector(&h)
 
-	// 为所有 metrics 注册一个 Collector
-	// 为 HarborHealthStatus 这个 metrics 注册一个 Collector
-	prometheus.MustRegister(collector.HarborHealthStatus)
+	// 注册所有自定义的 Metrics
+	collector.RegisterMetrics()
 
 	// 启动 Exporter
 	http.Handle("/metrics", promhttp.Handler())
