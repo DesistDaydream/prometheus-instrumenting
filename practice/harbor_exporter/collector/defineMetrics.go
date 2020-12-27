@@ -15,6 +15,5 @@ var (
 // RegisterMetrics 注册所有自定的 Metrics
 func RegisterMetrics() {
 	// 为所有 metrics 注册一个 Collector
-	// 为 HarborHealthStatus 这个 metrics 注册一个 Collector
 	prometheus.MustRegister(HarborHealthStatus)
 }
