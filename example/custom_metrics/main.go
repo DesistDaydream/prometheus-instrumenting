@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,7 +32,12 @@ func init() {
 
 func main() {
 	// prometheus 提供了多种方法，可以为 Metrics 设置值和标签。
-	cpuTemp.Set(65.3)
+	// 使用随机数为 cpuTemp 指标设置一个值
+	//
+	// TODO：为啥 Metric 的值每次 GET 不会变？~迷茫ing....
+	//
+	cpuTemp.Set(float64(rand.Int31n(100)))
+	// 为 hdFailures 指标的 device:/dev/sda 标签设置一个值
 	hdFailures.With(prometheus.Labels{"device": "/dev/sda"}).Inc()
 
 	// Handler 函数提供了默认的处理器，以便通过 HTTP 服务器暴露注册过的 metrics。一般情况下，使用 "/metrics" 路径来暴露 metrics
