@@ -20,8 +20,14 @@ type Metrics struct {
 func NewMetrics() *Metrics {
 	return &Metrics{
 		MetricsDesc: map[string]*prometheus.Desc{
-			// 定义 Metrics 信息，名称、帮助信息、标签 等等
-			"exporter_hello_world": prometheus.NewDesc("exporter_hello_world", "Help Info for exporter hello world", []string{"name"}, nil),
+			// 定义一个 Metrics 信息，名称、帮助信息、标签 等等
+			"exporter_hello_world": prometheus.NewDesc(
+				"exporter_hello_world",               // Metric 名称
+				"Help Info for exporter hello world", // Metric 的帮助信息
+				[]string{"name"},                     // Metric 的可变标签值的标签
+				nil,                                  // Metric 的不可变标签值的标签
+			),
+			// 还可以定义第二个、第三个.... Metrics
 		},
 	}
 }
@@ -40,8 +46,11 @@ func (c *Metrics) Collect(ch chan<- prometheus.Metric) {
 
 	// 获取 Metrics 的值
 	data := c.Set()
-	// 为 Metric 设置类型，并将获取到的值循环输出。如果由多个 Metircs 则写多个 for 循环即可
+	// 为 Metric 及其 标签 赋予具体的值
+	// 如果有多个 Metircs 则写多个 for 循环即可
 	for name, currentValue := range data {
+		// MustNewConstMetric() 返回一个具有固定值且无法更改的 Metric，需要传递的四个参数分别为：
+		// Metric 的 Desc、Metric 的值类型、当前 Metric 的值、Metric 的标签的值...(可以有多个标签值)
 		ch <- prometheus.MustNewConstMetric(c.MetricsDesc["exporter_hello_world"], prometheus.CounterValue, float64(currentValue), name)
 	}
 }
@@ -49,9 +58,10 @@ func (c *Metrics) Collect(ch chan<- prometheus.Metric) {
 // Set 为 Metric 设置值。如果由多个 Metrics，则可以设置多个返回值
 func (c *Metrics) Set() (value map[string]int) {
 	value = map[string]int{
-		// 使用 rand 生成随机数
-		"desistdaydream.com": int(rand.Int31n(1000)),
-		"nana.com":           int(rand.Int31n(1000)),
+		// desistdaydream 和 nana 是这个 Metric 的 name 标签的值
+		// 使用 rand 生成的随机数，是具有不同标签值的 Metric 的值
+		"desistdaydream": int(rand.Int31n(1000)),
+		"nana":           int(rand.Int31n(1000)),
 	}
 	return
 }
@@ -67,3 +77,11 @@ func main() {
 	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
+/*
+Export 暴露结果：
+# HELP exporter_hello_world Help Info for exporter hello world
+# TYPE exporter_hello_world counter
+exporter_hello_world{name="desistdaydream"} 81
+exporter_hello_world{name="nana"} 887
+*/
