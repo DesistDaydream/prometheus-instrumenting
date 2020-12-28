@@ -15,9 +15,9 @@ func HarborHealthCollector(h *HarborConnInfo) {
 	jsonBody, _ := simplejson.NewJson(body)
 	health, _ := jsonBody.Get("status").String()
 	if health == "healthy" {
-		healthstatus = 0
-	} else {
 		healthstatus = 1
+	} else {
+		healthstatus = 0
 	}
 	// 为指标设置值
 	// HarborHealthStatus.Set(healthstatus)
@@ -28,9 +28,9 @@ func HarborHealthCollector(h *HarborConnInfo) {
 		componentName, _ := jsonBody.Get("components").GetIndex(i).Get("name").String()
 		componentStatus, _ := jsonBody.Get("components").GetIndex(i).Get("status").String()
 		if componentStatus == "healthy" {
-			healthstatus = 0
-		} else {
 			healthstatus = 1
+		} else {
+			healthstatus = 0
 		}
 		fmt.Println(componentName, componentStatus)
 		HarborHealthStatus.With(prometheus.Labels{"component": componentName}).Set(healthstatus)
