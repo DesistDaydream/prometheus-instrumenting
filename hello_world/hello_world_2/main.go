@@ -27,7 +27,7 @@ func NewHelloWorldMetrics() *HelloWorldMetrics {
 		HelloWorldHomeDesc: prometheus.NewDesc(
 			"a_hello_world_home_exporter",              // Metric 名称
 			"Help Info for Hello World Home Exporter ", // Metric 的帮助信息
-			[]string{"home"}, nil,                      // Metric 的可变标签值的标签 与 不可变标签值的标签
+			nil, nil, // Metric 的可变标签值的标签 与 不可变标签值的标签，这里都为 nil 表示该 Metric 没有标签
 		),
 	}
 }
@@ -49,7 +49,8 @@ func (ms *HelloWorldMetrics) Collect(ch chan<- prometheus.Metric) {
 	// 该 Metric 值的类型为 Gauge，name 标签值为 nana 时，Metric 的值为 100 以内的随机数
 	ch <- prometheus.MustNewConstMetric(ms.HelloWorldPersonDesc, prometheus.GaugeValue, float64(rand.Int31n(100)), "nana")
 	// 为 ms.HelloWorldHomeDesc 这个 Metric 设置其属性的值，该 Metric 的值，是通过外部函数调用获得的。
-	ch <- prometheus.MustNewConstMetric(ms.HelloWorldHomeDesc, prometheus.GaugeValue, SetHelloWorldHomeMetricValue(), "universe")
+	// 由于该指标没有标签，所以第四个及以后的参数不写即可
+	ch <- prometheus.MustNewConstMetric(ms.HelloWorldHomeDesc, prometheus.GaugeValue, SetHelloWorldHomeMetricValue())
 }
 
 // SetHelloWorldHomeMetricValue 我们可以将设置 Metrics 值的行为，拿出来单独定义，然后从 Collect 中引用这个函数即可

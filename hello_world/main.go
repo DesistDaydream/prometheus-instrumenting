@@ -66,6 +66,7 @@ func main() {
 /*
 Export 暴露结果：
 # HELP a_hello_world_exporter Help Info for Hello World Exporter
-# TYPE a_hello_world_exporter counter
-a_hello_world_exporter{name="DesistDaydream"} 59
+# TYPE a_hello_world_exporter gauge
+a_hello_world_exporter{name="haohao"} 81
+a_hello_world_exporter{name="nana"} 87
 */
