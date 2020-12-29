@@ -1,0 +1,130 @@
+package collector
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	flag "github.com/spf13/pflag"
+)
+
+var (
+	// Scrapers = map[Scraper]bool{
+	// 	ScrapeSystemInfo{}:  true,
+	// 	ScrapeStatistics{}:  true,
+	// 	ScrapeQuotas{}:      true,
+	// 	ScrapeHealth{}:      true,
+	// 	ScrapeProjects{}:    true,
+	// 	ScrapeUsers{}:       true,
+	// 	ScrapeLogs{}:        true,
+	// 	ScrapeReplication{}: false,
+	// 	ScrapeGc{}:          false,
+	// 	ScrapeRegistries{}:  false,
+	// }
+
+	// TODO
+	//  tags always return full tag, see https://github.com/goharbor/harbor/issues/12279
+
+	errResult = errors.New("cannot find data, maybe json is nil")
+)
+
+// HarborOpts is
+type HarborOpts struct {
+	URL      string
+	Username string
+	password string
+	UA       string
+	Timeout  time.Duration
+	Insecure bool
+}
+
+// XskyClient 连接 Xsky 所需信息
+type XskyClient struct {
+	Client *http.Client
+	Opts   *HarborOpts
+}
+
+// subInsJson could use for member and repos
+type subInsJSON struct {
+	ID        int `json:"id"`
+	ProjectID int `json:"project_id"`
+}
+
+type idJSON struct {
+	ID int `json:"id"`
+}
+
+// Error is
+type Error struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// AddFlag use after set Opts
+func (o *HarborOpts) AddFlag() {
+	flag.StringVar(&o.URL, "harbor-server", "", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
+	flag.StringVar(&o.Username, "harbor-user", "admin", "harbor username")
+	flag.StringVar(&o.password, "harbor-pass", "password", "harbor password")
+	flag.StringVar(&o.UA, "harbor-ua", "harbor_exporter", "user agent of the harbor http client")
+	flag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
+	flag.BoolVar(&o.Insecure, "insecure", false, "Disable TLS host verification.")
+}
+
+func (h *XskyClient) request(endpoint string) ([]byte, error) {
+	url := h.Opts.URL + endpoint
+	log.Debugf("request url %s", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.SetBasicAuth(h.Opts.Username, h.Opts.password)
+	req.Header.Set("User-Agent", h.Opts.UA)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, err := h.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error handling request for %s http-statuscode: %s", endpoint, resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+// Ping is
+func (h *XskyClient) Ping() (bool, error) {
+	req, err := http.NewRequest("GET", h.Opts.URL+"/configurations", nil)
+	if err != nil {
+		return false, err
+	}
+	req.SetBasicAuth(h.Opts.Username, h.Opts.password)
+
+	resp, err := h.Client.Do(req)
+	if err != nil {
+		return false, err
+	}
+
+	resp.Body.Close()
+
+	switch {
+	case resp.StatusCode == http.StatusOK:
+		return true, nil
+	case resp.StatusCode == http.StatusUnauthorized:
+		return false, errors.New("username or password incorrect")
+	default:
+		return false, fmt.Errorf("error handling request, http-statuscode: %s", resp.Status)
+	}
+}
