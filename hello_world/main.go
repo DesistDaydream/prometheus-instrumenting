@@ -31,7 +31,7 @@ func (ms *HelloWorldMetrics) Describe(ch chan<- *prometheus.Desc) {
 	ch <- ms.HelloWorldDesc
 }
 
-// Collect 让 HelloWorldMetrics 实现 Collector 接口。采集 Metrics 的具体行为并设置 Metrics 的值类型,将值传到 channel 中
+// Collect 让 HelloWorldMetrics 实现 Collector 接口。采集 Metrics 的具体行为并设置 Metrics 的值类型,将 Metrics 的信息传到 channel 中
 func (ms *HelloWorldMetrics) Collect(ch chan<- prometheus.Metric) {
 	ms.mutex.Lock() // 加锁
 	defer ms.mutex.Unlock()
