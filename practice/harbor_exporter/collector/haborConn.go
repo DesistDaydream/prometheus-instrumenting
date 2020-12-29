@@ -14,6 +14,9 @@ type HarborConnInfo struct {
 	Password string
 }
 
+// HC 存储 Harbor 的连接信息
+var HC HarborConnInfo
+
 // HarborConnFlags 通过命令行设定连接 Harbor 的信息
 func (h *HarborConnInfo) HarborConnFlags() {
 	pflag.StringVar(&h.BaseURL, "harbor-baseurl", "http://172.19.42.218/api/v2.0", "Harbor URL")
@@ -44,4 +47,18 @@ func (h *HarborConnInfo) HarborConn(endpoint string) (body []byte, err error) {
 		return nil, err
 	}
 	return
+}
+
+func harbor() {
+	var h HarborConnInfo
+	// 加载关于 Harbor 相关的 Flags
+	h.HarborConnFlags()
+	pflag.Parse()
+}
+
+// Conn 设置连接 Harbor 的信息
+func Conn() {
+	// 加载关于 Harbor 相关的 Flags
+	HC.HarborConnFlags()
+	pflag.Parse()
 }
