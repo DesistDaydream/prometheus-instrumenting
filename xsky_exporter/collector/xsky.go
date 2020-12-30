@@ -39,6 +39,7 @@ type XskyOpts struct {
 	UA       string
 	Timeout  time.Duration
 	Insecure bool
+	Token    string
 }
 
 // XskyClient 连接 Xsky 所需信息
@@ -74,7 +75,7 @@ func (o *XskyOpts) AddFlag() {
 }
 
 // GetXskyToken 获取 Xsky 认证所需 Token
-func (x *XskyClient) GetXskyToken() (token string, err error) {
+func (x *XskyClient) GetXskyToken() (err error) {
 	// 设置 json 格式的 request body
 	jsonReqBody := []byte("{\"auth\":{\"name\":\"" + x.Opts.Username + "\",\"password\":\"" + x.Opts.password + "\"}}")
 	// 设置 URL
@@ -100,14 +101,21 @@ func (x *XskyClient) GetXskyToken() (token string, err error) {
 		return
 	}
 	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
-	token, _ = jsonRespBody.Get("token").Get("uuid").String()
+	x.Opts.Token, _ = jsonRespBody.Get("token").Get("uuid").String()
+	fmt.Println("成功获取 Token！ ", x.Opts.Token)
 	return
 }
 
 // Request 建立与 Xsky 的连接，并返回 Response Body
 func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 	// 获取 Xsky 认证所需 Token
-	token, _ := x.GetXskyToken()
+	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token
+	if x.Opts.Token == "" {
+		x.GetXskyToken()
+	}
+	fmt.Println("Xsky Token 为：", x.Opts.Token)
+
+	// 根据认证信息及 endpoint 参数，创建与 Xsky 的连接，并返回 Body 给每个 Metric 采集器
 	var resp *http.Response
 	url := x.Opts.URL + endpoint
 	log.Debugf("request url %s", url)
@@ -118,9 +126,8 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 		return nil, err
 	}
 	req.SetBasicAuth(x.Opts.Username, x.Opts.password)
-	// req.Header.Set("User-Agent", x.Opts.UA)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("Cookie", "XMS_AUTH_TOKEN="+token)
+	req.Header.Set("Cookie", "XMS_AUTH_TOKEN="+x.Opts.Token)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	if resp, err = x.Client.Do(req); err != nil {
