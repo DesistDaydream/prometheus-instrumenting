@@ -20,20 +20,23 @@ var (
 	)
 )
 
-// ScrapeCluster 将要实现 Scraper 接口的一个 Metric 结构体
+// ScrapeCluster 是将要实现 Scraper 接口的一个 Metric 结构体
 type ScrapeCluster struct{}
 
-// Name of the Scraper. Should be unique.
+// Name 指定自己定义的 抓取器 的名字，与 Metric 的名字不是一个概念，但是一般保持一致
+// 该方法用于为 ScrapeCluster 结构体实现 Scraper 接口
 func (ScrapeCluster) Name() string {
 	return "cluster_info"
 }
 
-// Help describes the role of the Scraper.
+// Help 指定自己定义的 抓取器 的帮助信息，这里的 Help 的内容将会作为命令行标志的帮助信息。与 Metric 的 Help 不是一个概念。
+// 该方法用于为 ScrapeCluster 结构体实现 Scraper 接口
 func (ScrapeCluster) Help() string {
 	return "Xsky Cluster Info"
 }
 
-// Scrape collects data from client and sends it over channel as prometheus metric.
+// Scrape 从客户端采集数据，并将其作为 Metric 通过 channel(通道) 发送。主要就是采集 Xsky 集群信息的具体行为。
+// 该方法用于为 ScrapeCluster 结构体实现 Scraper 接口
 func (ScrapeCluster) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (err error) {
 	// 声明需要绑定的 响应体 与 结构体
 	var (

@@ -79,7 +79,8 @@ func LogInit(level, file string) error {
 }
 
 func main() {
-	// 设置命令行标志
+	// 设置命令行标志，开始
+	//
 	listenAddress := flag.String("web.listen-address", ":8080", "Address to listen on for web interface and telemetry.")
 	metricsPath := flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	logLevel := flag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
@@ -87,10 +88,12 @@ func main() {
 	versionP := flag.Bool("version", false, "print version info")
 	// flag.StringVar(&collector.HarborVersion, "override-version", "", "override the harbor version")
 
+	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.XskyOpts{}
 	opts.AddFlag()
 
-	// Generate ON/OFF flags for all scrapers.
+	// 生成抓取器的命令行标志，用于通过命令行控制开启哪些抓取器
+	// 说白了就是控制采集哪些指标
 	scraperFlags := map[collector.Scraper]*bool{}
 	for scraper, enabledByDefault := range collector.Scrapers {
 		defaultOn := false
@@ -100,9 +103,12 @@ func main() {
 		f := flag.Bool("collect."+scraper.Name(), defaultOn, scraper.Help())
 		scraperFlags[scraper] = f
 	}
-
+	// 解析命令行标志
 	flag.Parse()
+	//
+	// 设置命令行标志，结束
 
+	// 通过 --version 命令行标志，可以获取 versionPrint() 函数中定义的信息
 	if *versionP {
 		fmt.Print(versionPrint())
 		return
@@ -113,7 +119,10 @@ func main() {
 		log.Fatal(errors.Wrap(err, "set log level error"))
 	}
 
-	// Register only scrapers enabled by flag.
+	// 下面的都是 Exporter 运行的最主要逻辑了
+	//
+	// 获取所有通过命令行标志，设置开启的 scrapers(抓取器)。
+	// 不包含默认开启的，默认开启的在代码中已经指定了。
 	enabledScrapers := []collector.Scraper{}
 	for scraper, enabled := range scraperFlags {
 		if *enabled {
@@ -121,13 +130,12 @@ func main() {
 			enabledScrapers = append(enabledScrapers, scraper)
 		}
 	}
-
-	// 实例化所有自定义的 Metrics
+	// 实例化 Exporter，其中包括所有自定义的 Metrics
 	exporter, err := collector.NewExporter(opts, collector.NewMetrics(), enabledScrapers)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// 实例化一个注册器,并使用这个注册器注册所有 Metrics
+	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(exporter)
 

@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// HelloWorldMetrics 用来保存所有 Metrics
+// HelloWorldMetrics 用来保存所有 Metrics,实现了 prometheus.Collector
 type HelloWorldMetrics struct {
 	HelloWorldPersonDesc *prometheus.Desc
 	HelloWorldHomeDesc   *prometheus.Desc

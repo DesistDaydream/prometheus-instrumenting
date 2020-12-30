@@ -13,7 +13,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	//"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -40,7 +39,8 @@ var (
 	)
 )
 
-// Exporter is
+// Exporter 实现了 prometheus.Collector，其中包含了很多 Metric。
+// 只要 Exporter 实现了 prometheus.Collector，就可以调用 MustRegister() 将其注册到 prometheus 库中
 type Exporter struct {
 	//ctx      context.Context  //http timeout will work, don't need this
 	client   *XskyClient
@@ -105,6 +105,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect 实现 Collector 接口的方法
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
+	// 将 scrape() 方法引进来，用来在实现 Collect 接口后，调用 prometheus 功能可以操作 scrape() 中相关的 Metrics
 	e.scrape(ch)
 
 	ch <- e.metrics.TotalScrapes
@@ -116,8 +117,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	e.metrics.TotalScrapes.Inc()
 
+	// 第一个 scrapeTime,开始统计 scrape 指标的耗时
 	scrapeTime := time.Now()
 
+	// 检验目标服务器是否正常，每次执行 Collect 都会检查
 	if pong, err := e.client.Ping(); pong != true || err != nil {
 		log.WithFields(log.Fields{
 			"url":      e.client.Opts.URL + "/configurations",
@@ -129,15 +132,16 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	e.metrics.XskyUP.Set(1)
 	e.metrics.Error.Set(0)
 
+	// 对应第一个 scrapeTime，scrapeDurationDesc 这个 Metric 用于显示抓取标签为 reach 指标所消耗的时间
 	ch <- prometheus.MustNewConstMetric(scrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "reach")
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	for _, scraper := range e.scrapers {
-
 		wg.Add(1)
 		go func(scraper Scraper) {
 			defer wg.Done()
+			// 第二个 scrapeTime,开始统计 scrape 指标的耗时
 			label := scraper.Name()
 			scrapeTime := time.Now()
 			if err := scraper.Scrape(e.client, ch); err != nil {
@@ -145,6 +149,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				e.metrics.ScrapeErrors.WithLabelValues(label).Inc()
 				e.metrics.Error.Set(1)
 			}
+			// 对应第二个 scrapeTime，scrapeDurationDesc 这个 Metric，用于显示抓取标签为 label(这是变量) 指标所消耗的时间
 			ch <- prometheus.MustNewConstMetric(scrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), label)
 		}(scraper)
 	}

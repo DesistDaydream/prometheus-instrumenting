@@ -14,16 +14,9 @@ import (
 )
 
 var (
-	// Scrapers is
+	// Scrapers 是要使用的 抓取器
 	Scrapers = map[Scraper]bool{
-		// ScrapeSystemInfo{}:  true,
-		// ScrapeStatistics{}:  true,
-		// ScrapeQuotas{}:      true,
 		ScrapeCluster{}: true,
-		// ScrapeProjects{}:    true,
-		// ScrapeUsers{}:       true,
-		// ScrapeLogs{}:        true,
-		// ScrapeReplication{}: false,
 		// ScrapeGc{}:          false,
 		// ScrapeRegistries{}:  false,
 	}
@@ -36,7 +29,6 @@ type XskyOpts struct {
 	URL      string
 	Username string
 	password string
-	UA       string
 	Timeout  time.Duration
 	Insecure bool
 	Token    string
@@ -69,7 +61,6 @@ func (o *XskyOpts) AddFlag() {
 	flag.StringVar(&o.URL, "xsky-server", "http://10.20.5.98:8056", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
 	flag.StringVar(&o.Username, "xsky-user", "admin", "xsky username")
 	flag.StringVar(&o.password, "xsky-pass", "admin", "xsky password")
-	flag.StringVar(&o.UA, "harbor-ua", "harbor_exporter", "user agent of the harbor http client")
 	flag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
 	flag.BoolVar(&o.Insecure, "insecure", false, "Disable TLS host verification.")
 }
@@ -147,8 +138,10 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 	return body, nil
 }
 
-// Ping is
+// Ping 在 Collector 接口的实现方法 Collect() 中
+// 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
+	// fmt.Println("每次从 Xsky 获取数据时，都会进行测试")
 	req, err := http.NewRequest("GET", x.Opts.URL+"/configurations", nil)
 	if err != nil {
 		return false, err
