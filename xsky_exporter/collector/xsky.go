@@ -1,11 +1,13 @@
 package collector
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
@@ -17,7 +19,7 @@ var (
 		// ScrapeSystemInfo{}:  true,
 		// ScrapeStatistics{}:  true,
 		// ScrapeQuotas{}:      true,
-		// ScrapeHealth{}:      true,
+		ScrapeUserUsed{}: true,
 		// ScrapeProjects{}:    true,
 		// ScrapeUsers{}:       true,
 		// ScrapeLogs{}:        true,
@@ -74,8 +76,41 @@ func (o *XskyOpts) AddFlag() {
 	flag.BoolVar(&o.Insecure, "insecure", false, "Disable TLS host verification.")
 }
 
+// GetXskyToken 获取 Xsky 认证所需 Token
+func (x *XskyClient) GetXskyToken() (token string, err error) {
+	// 设置 json 格式的 request body
+	jsonReqBody := []byte("{\"auth\":{\"name\":\"" + x.Opts.Username + "\",\"password\":\"" + x.Opts.password + "\"}}")
+	// 设置 URL
+	url := fmt.Sprintf("%v/api/v1/auth/tokens:login", x.Opts.URL)
+	// 设置 Request 信息
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
+	req.Header.Add("Content-Type", "application/json")
+
+	// 发送 Request 并获取 Response
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	// 处理 Response Body,并获取 Token
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	jsonRespBody, err := simplejson.NewJson(respBody)
+	if err != nil {
+		return
+	}
+	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
+	token, _ = jsonRespBody.Get("token").Get("uuid").String()
+	return
+}
+
 // Request 建立与 Xsky 的连接，并返回 Response Body
 func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
+	// 获取 Xsky 认证所需 Token
+	token, _ := x.GetXskyToken()
 	var resp *http.Response
 	url := x.Opts.URL + endpoint
 	log.Debugf("request url %s", url)
@@ -86,8 +121,9 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 		return nil, err
 	}
 	req.SetBasicAuth(x.Opts.Username, x.Opts.password)
-	req.Header.Set("User-Agent", x.Opts.UA)
+	// req.Header.Set("User-Agent", x.Opts.UA)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Cookie", "XMS_AUTH_TOKEN="+token)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	if resp, err = x.Client.Do(req); err != nil {
