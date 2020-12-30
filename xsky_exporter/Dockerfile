@@ -11,4 +11,4 @@ FROM alpine
 WORKDIR /root/exporter
 COPY --from=builder /root/exporter/main /usr/local/bin/xsky-exporter
 EXPOSE 8080
-CMD ["xsky-exporter"]
+ENTRYPOINT  [ "/usr/local/bin/xsky-exporter" ]
