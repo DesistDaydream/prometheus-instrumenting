@@ -13,28 +13,17 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
-	flag "github.com/spf13/pflag"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 )
 
-var (
-	version      string
-	gitCommit    string
-	gitTreeState = ""                     // state of git tree, either "clean" or "dirty"
-	buildDate    = "1970-01-01T00:00:00Z" // build date, output of $(date +'%Y-%m-%dT%H:%M:%S')
-)
-
-// 在 / 页面输出的一些信息
-func versionPrint() string {
-	return fmt.Sprintf(`Name: %s
-Version: %s
-CommitID: %s
-GitTreeState: %s
-BuildDate: %s
-GoVersion: %s
-Compiler: %s
-Platform: %s/%s
-`, collector.Name(), version, gitCommit, gitTreeState, buildDate, runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
+// scrapers 列出了应该注册的所有 Scraper(抓取器)，以及默认情况下是否应该启用它们
+// 用一个 map 来定义这些抓取器是否开启，key 为 collector.Scraper 接口类型，value 为 bool 类型。
+// 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
+var scrapers = map[collector.Scraper]bool{
+	collector.ScrapeCluster{}: true,
+	// ScrapeGc{}:          false,
+	// ScrapeRegistries{}:  false,
 }
 
 // setupSigusr1Trap is
@@ -52,27 +41,27 @@ func setupSigusr1Trap() {
 func DumpStacks() {
 	buf := make([]byte, 16384)
 	buf = buf[:runtime.Stack(buf, true)]
-	log.Printf("=== BEGIN goroutine stack dump ===\n%s\n=== END goroutine stack dump ===", buf)
+	logrus.Printf("=== BEGIN goroutine stack dump ===\n%s\n=== END goroutine stack dump ===", buf)
 }
 
-// LogInit is
+// LogInit 日志功能初始化，若指定了 log-output 命令行标志，则将日志写入到文件中
 func LogInit(level, file string) error {
-	log.SetFormatter(&log.TextFormatter{
+	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
-	le, err := log.ParseLevel(level)
+	le, err := logrus.ParseLevel(level)
 	if err != nil {
 		return err
 	}
-	log.SetLevel(le)
+	logrus.SetLevel(le)
 
 	if file != "" {
 		f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE, 0755)
 		if err != nil {
 			return err
 		}
-		log.SetOutput(f)
+		logrus.SetOutput(f)
 	}
 
 	return nil
@@ -81,42 +70,39 @@ func LogInit(level, file string) error {
 func main() {
 	// 设置命令行标志，开始
 	//
-	listenAddress := flag.String("web.listen-address", ":8080", "Address to listen on for web interface and telemetry.")
-	metricsPath := flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
-	logLevel := flag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
-	logFile := flag.String("log-output", "", "the file which log to, default stdout")
-	versionP := flag.Bool("version", false, "print version info")
-	// flag.StringVar(&collector.HarborVersion, "override-version", "", "override the harbor version")
+	listenAddress := pflag.String("web.listen-address", ":8080", "Address to listen on for web interface and telemetry.")
+	metricsPath := pflag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
+	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
+	logFile := pflag.String("log-output", "", "the file which log to, default stdout")
+	// pflag.StringVar(&collector.HarborVersion, "override-version", "", "override the harbor version")
 
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.XskyOpts{}
 	opts.AddFlag()
 
-	// 生成抓取器的命令行标志，用于通过命令行控制开启哪些抓取器
-	// 说白了就是控制采集哪些指标
+	// scraperFlags 也是一个 map，并且 key 为 collector.Scraper 接口类型，这一小段代码主要有下面几个作用
+	// 1.生成抓取器的命令行标志，用于通过命令行控制开启哪些抓取器，说白了就是控制采集哪些指标
+	// 2.下面的 for 循环会通过命令行 flag 获取到的值，放到 scraperFlags 这个 map 中
+	// 3.然后在后面注册 Exporter 之前，先通过这个 map 中的键值对判断是否要把 value 为 true 的 抓取器 注册进去
 	scraperFlags := map[collector.Scraper]*bool{}
-	for scraper, enabledByDefault := range collector.Scrapers {
+	for scraper, enabledByDefault := range scrapers {
 		defaultOn := false
 		if enabledByDefault {
 			defaultOn = true
 		}
-		f := flag.Bool("collect."+scraper.Name(), defaultOn, scraper.Help())
+		// 设置命令行 flag
+		f := pflag.Bool("collect."+scraper.Name(), defaultOn, scraper.Help())
+		// 将命令行 flag 中获取到的值，赋到 map 中，作为 map 的 value
 		scraperFlags[scraper] = f
 	}
 	// 解析命令行标志
-	flag.Parse()
+	pflag.Parse()
 	//
 	// 设置命令行标志，结束
 
-	// 通过 --version 命令行标志，可以获取 versionPrint() 函数中定义的信息
-	if *versionP {
-		fmt.Print(versionPrint())
-		return
-	}
-
 	// 初始化日志
 	if err := LogInit(*logLevel, *logFile); err != nil {
-		log.Fatal(errors.Wrap(err, "set log level error"))
+		logrus.Fatal(errors.Wrap(err, "set log level error"))
 	}
 
 	// 下面的都是 Exporter 运行的最主要逻辑了
@@ -126,14 +112,14 @@ func main() {
 	enabledScrapers := []collector.Scraper{}
 	for scraper, enabled := range scraperFlags {
 		if *enabled {
-			log.Info("Scraper enabled ", scraper.Name())
+			logrus.Info("Scraper enabled ", scraper.Name())
 			enabledScrapers = append(enabledScrapers, scraper)
 		}
 	}
 	// 实例化 Exporter，其中包括所有自定义的 Metrics
 	exporter, err := collector.NewExporter(opts, collector.NewMetrics(), enabledScrapers)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
@@ -144,15 +130,13 @@ func main() {
 		w.Write([]byte(`<html>
              <head><title>` + collector.Name() + `</title></head>
              <body>
-             <h1><a style="text-decoration:none" href='https://github.com/zhangguanzhang/harbor_exporter'>` + collector.Name() + `</a></h1>
+             <h1>` + collector.Name() + `</h1>
              <p><a href='` + *metricsPath + `'>Metrics</a></p>
-             <h2>Build</h2>
-             <pre>` + versionPrint() + `</pre>
              </body>
              </html>`))
 	})
 
-	http.Handle(*metricsPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorLog: log.StandardLogger()}))
+	http.Handle(*metricsPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorLog: logrus.StandardLogger()}))
 
 	http.HandleFunc("/-/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -161,10 +145,9 @@ func main() {
 
 	// 启动前检查并启动 Exporter
 	setupSigusr1Trap()
-	log.Info("Listening on address ", *listenAddress)
+	logrus.Info("Listening on address ", *listenAddress)
 	daemon.SdNotify(false, daemon.SdNotifyReady)
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
-
 }

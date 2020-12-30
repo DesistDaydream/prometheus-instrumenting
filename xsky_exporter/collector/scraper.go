@@ -7,7 +7,7 @@ import (
 //https://github.com/prometheus/mysqld_exporter/blob/master/collector/scraper.go
 
 // Scraper 接口是抓取器的最小接口，可让我们向本 exporter 添加新的 Prometheus 指标。
-// 可以这么理解，每个需要抓取的 Metric 及其行为，都会抽象成一个 Scraper(抓取器)。
+// 可以这么理解，每个需要抓取的 Metric 及其行为，都会抽象成一个 **Scraper(抓取器)**。
 // 并且，可以通过命令行标志来控制开启或关闭哪个抓取器
 // 注意：抓取器的 Name和Help 与 Metric 的 Name和Help 不是一个概念
 type Scraper interface {

@@ -13,17 +13,6 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var (
-	// Scrapers 是要使用的 抓取器
-	Scrapers = map[Scraper]bool{
-		ScrapeCluster{}: true,
-		// ScrapeGc{}:          false,
-		// ScrapeRegistries{}:  false,
-	}
-
-	errResult = errors.New("cannot find data, maybe json is nil")
-)
-
 // XskyOpts 登录 Xsky 所需属性
 type XskyOpts struct {
 	URL      string
@@ -38,22 +27,6 @@ type XskyOpts struct {
 type XskyClient struct {
 	Client *http.Client
 	Opts   *XskyOpts
-}
-
-// subInsJson could use for member and repos
-type subInsJSON struct {
-	ID        int `json:"id"`
-	ProjectID int `json:"project_id"`
-}
-
-type idJSON struct {
-	ID int `json:"id"`
-}
-
-// Error is
-type Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
 }
 
 // AddFlag use after set Opts
