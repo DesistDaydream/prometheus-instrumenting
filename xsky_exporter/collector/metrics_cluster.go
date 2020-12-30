@@ -10,31 +10,31 @@ import (
 
 var (
 	// check interface
-	_ Scraper = ScrapeUserUsed{}
+	_ Scraper = ScrapeCluster{}
 
 	// 设置 Metric 的基本信息
-	userUsed = prometheus.NewDesc(
+	cluster = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "cluster_info"),
 		"Xsky Cluster Info",
 		[]string{"comments"}, nil,
 	)
 )
 
-// ScrapeUserUsed 将要实现 Scraper 接口的一个 Metric 结构体
-type ScrapeUserUsed struct{}
+// ScrapeCluster 将要实现 Scraper 接口的一个 Metric 结构体
+type ScrapeCluster struct{}
 
 // Name of the Scraper. Should be unique.
-func (ScrapeUserUsed) Name() string {
+func (ScrapeCluster) Name() string {
 	return "cluster_info"
 }
 
 // Help describes the role of the Scraper.
-func (ScrapeUserUsed) Help() string {
+func (ScrapeCluster) Help() string {
 	return "Xsky Cluster Info"
 }
 
 // Scrape collects data from client and sends it over channel as prometheus metric.
-func (ScrapeUserUsed) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (err error) {
+func (ScrapeCluster) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (err error) {
 	// 声明需要绑定的 响应体 与 结构体
 	var (
 		respBody []byte
@@ -54,8 +54,8 @@ func (ScrapeUserUsed) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (e
 
 	// 根据 Response Body 获取用户使用量
 	fmt.Printf("当前用户已经使用了 %v KiB\n", data.Cluster.Samples[0].UsedKbyte)
-	ch <- prometheus.MustNewConstMetric(userUsed, prometheus.GaugeValue, float64(data.Cluster.Samples[0].UsedKbyte), "used_kbyte")
-	ch <- prometheus.MustNewConstMetric(userUsed, prometheus.GaugeValue, float64(data.Cluster.Samples[0].ActualKbyte), "actual_kbyte")
+	ch <- prometheus.MustNewConstMetric(cluster, prometheus.GaugeValue, float64(data.Cluster.Samples[0].UsedKbyte), "used_kbyte")
+	ch <- prometheus.MustNewConstMetric(cluster, prometheus.GaugeValue, float64(data.Cluster.Samples[0].ActualKbyte), "actual_kbyte")
 	return nil
 }
 

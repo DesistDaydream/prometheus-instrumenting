@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"os"
 
 	"net/http"
 	"net/url"
@@ -57,10 +56,10 @@ func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []Scraper) (*Exporter
 	}
 	u, err := url.Parse(uri)
 	if err != nil {
-		return nil, fmt.Errorf("invalid harbor URL: %s", err)
+		return nil, fmt.Errorf("invalid Xsky URL: %s", err)
 	}
 	if u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
-		return nil, fmt.Errorf("invalid harbor URL: %s", uri)
+		return nil, fmt.Errorf("invalid Xsky URL: %s", uri)
 	}
 
 	rootCAs, err := x509.SystemCertPool()
@@ -77,21 +76,11 @@ func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []Scraper) (*Exporter
 		tlsClientConfig.InsecureSkipVerify = true
 	}
 
-	user := os.Getenv("HARBOR_USERNAME")
-	if user != "" {
-		opts.password = user
-	}
-
-	pass := os.Getenv("HARBOR_PASSWORD")
-	if pass != "" {
-		opts.password = pass
-	}
-
 	transport := &http.Transport{
 		TLSClientConfig: tlsClientConfig,
 	}
 
-	hc := &XskyClient{
+	xc := &XskyClient{
 		Opts: opts,
 		Client: &http.Client{
 			Timeout:   opts.Timeout,
@@ -100,7 +89,7 @@ func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []Scraper) (*Exporter
 	}
 
 	return &Exporter{
-		client:   hc,
+		client:   xc,
 		metrics:  metrics,
 		scrapers: scrapers,
 	}, nil
@@ -177,24 +166,24 @@ func NewMetrics() Metrics {
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "scrapes_total",
-			Help:      "Total number of times harbor was scraped for metrics.",
+			Help:      "Total number of times Xsky was scraped for metrics.",
 		}),
 		ScrapeErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "scrape_errors_total",
-			Help:      "Total number of times an error occurred scraping a harbor.",
+			Help:      "Total number of times an error occurred scraping a Xsky.",
 		}, []string{"collector"}),
 		Error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "last_scrape_error",
-			Help:      "Whether the last scrape of metrics from harbor resulted in an error (1 for error, 0 for success).",
+			Help:      "Whether the last scrape of metrics from Xsky resulted in an error (1 for error, 0 for success).",
 		}),
 		XskyUP: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Name:      "up",
-			Help:      "Whether the harbor is up.",
+			Help:      "Whether the Xsky is up.",
 		}),
 	}
 }

@@ -19,7 +19,7 @@ var (
 		// ScrapeSystemInfo{}:  true,
 		// ScrapeStatistics{}:  true,
 		// ScrapeQuotas{}:      true,
-		ScrapeUserUsed{}: true,
+		ScrapeCluster{}: true,
 		// ScrapeProjects{}:    true,
 		// ScrapeUsers{}:       true,
 		// ScrapeLogs{}:        true,
@@ -27,9 +27,6 @@ var (
 		// ScrapeGc{}:          false,
 		// ScrapeRegistries{}:  false,
 	}
-
-	// TODO
-	//  tags always return full tag, see https://github.com/goharbor/harbor/issues/12279
 
 	errResult = errors.New("cannot find data, maybe json is nil")
 )
