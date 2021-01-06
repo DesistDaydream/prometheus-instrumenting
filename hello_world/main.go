@@ -12,7 +12,7 @@ import (
 // HelloWorldMetrics 用来保存所有 Metrics，实现了 prometheus.Collector
 type HelloWorldMetrics struct {
 	HelloWorldDesc *prometheus.Desc
-	mutex          sync.Mutex
+	mutex          sync.Mutex // 加锁用，与 exporter 的主要运行逻辑无关
 }
 
 // NewHelloWorldMetrics 实例化 HelloWorldMetrics，就是为所有 Mestirs 设定一些基本信息
