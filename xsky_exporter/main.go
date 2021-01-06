@@ -17,6 +17,16 @@ import (
 	"github.com/spf13/pflag"
 )
 
+/*
+该项目起源于 mysql exporter，是对 mysql exporter 的改装
+该项目对 prometheus.Collector 接口进行了二次封装，通过一个名为 Scraper 的接口中的 Scrape() 方法，来定义具体的采集行为
+scraper.go 定义了 Scraper 接口
+exporter.go 文件定义了一个实现了 Scraper 接口的结构体。这个结构体包含两种属性。1.所有 Metrics、 2.某个待采集目标的连接信息的
+xsky.go 文件则是定义了连接 xsky 的方式，在 mysql expoter 项目中，这个文件叫 mysql.go,就是定义 mysql 的连接方式
+metrics_XXXX.go 文件就是定义各种待采集的 Metrics，以及采集这些 Metrics 的具体行为。一个 Metric 放在一个文件中。
+metrics_XXXX.go 文件中，包含了实现了 Scraper 接口的结构体。
+*/
+
 // scrapers 列出了应该注册的所有 Scraper(抓取器)，以及默认情况下是否应该启用它们
 // 用一个 map 来定义这些抓取器是否开启，key 为 collector.Scraper 接口类型，value 为 bool 类型。
 // 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
@@ -68,8 +78,7 @@ func LogInit(level, file string) error {
 }
 
 func main() {
-	// 设置命令行标志，开始
-	//
+	// ######## 设置命令行标志，开始 ########
 	listenAddress := pflag.String("web.listen-address", ":8080", "Address to listen on for web interface and telemetry.")
 	metricsPath := pflag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
@@ -97,16 +106,14 @@ func main() {
 	}
 	// 解析命令行标志
 	pflag.Parse()
-	//
-	// 设置命令行标志，结束
+	// ######## 设置命令行标志，结束 ########
 
 	// 初始化日志
 	if err := LogInit(*logLevel, *logFile); err != nil {
 		logrus.Fatal(errors.Wrap(err, "set log level error"))
 	}
 
-	// 下面的都是 Exporter 运行的最主要逻辑了
-	//
+	// ######## 下面的都是 Exporter 运行的最主要逻辑了 ########
 	// 获取所有通过命令行标志，设置开启的 scrapers(抓取器)。
 	// 不包含默认开启的，默认开启的在代码中已经指定了。
 	enabledScrapers := []collector.Scraper{}
@@ -124,6 +131,7 @@ func main() {
 	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(exporter)
+	// ######## Exporter 主要运行逻辑结束 ########
 
 	// 设置路由信息
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

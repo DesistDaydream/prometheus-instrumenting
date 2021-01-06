@@ -12,7 +12,9 @@ var (
 	// check interface
 	_ Scraper = ScrapeCluster{}
 
-	// 设置 Metric 的基本信息
+	// 设置 Metric 的基本信息，从 xsky 的接口中获取 cluster 相关的数据。
+	// 由于 cluster 中包含大量内容，如果在抓取 Metrics 时，想要获取其中的所有数据
+	// 则可以将 cluster 的json格式的响应体中的 key 当作 metric 的标签值即可
 	cluster = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "cluster_info"),
 		"Xsky Cluster Info",
@@ -44,7 +46,7 @@ func (ScrapeCluster) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (er
 		data     clusterJSON
 	)
 
-	// 根据 URI 获取 Response Body
+	// 根据 URI 获取 Response Body，获取 cluster 相关的信息。里面包含大量内容
 	url := "/v1/cluster"
 	if respBody, err = client.Request(url); err != nil {
 		return err
@@ -57,6 +59,7 @@ func (ScrapeCluster) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (er
 
 	// 根据 Response Body 获取用户使用量
 	fmt.Printf("当前用户已经使用了 %v KiB\n", data.Cluster.Samples[0].UsedKbyte)
+	// cluster 中各种数据的 key 可以作为 metric 的标签值，cluster 中数据的值，就是该 metric 的值
 	ch <- prometheus.MustNewConstMetric(cluster, prometheus.GaugeValue, float64(data.Cluster.Samples[0].UsedKbyte), "used_kbyte")
 	ch <- prometheus.MustNewConstMetric(cluster, prometheus.GaugeValue, float64(data.Cluster.Samples[0].ActualKbyte), "actual_kbyte")
 	return nil
