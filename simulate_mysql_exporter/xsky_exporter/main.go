@@ -30,6 +30,7 @@ metrics_XXXX.go 文件中，包含了实现了 Scraper 接口的结构体。
 // 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
 var scrapers = map[scraper.CommonScraper]bool{
 	collector.ScrapeCluster{}: true,
+	collector.ScrapeFuck{}:    true,
 	// ScrapeGc{}:          false,
 	// ScrapeRegistries{}:  false,
 }
