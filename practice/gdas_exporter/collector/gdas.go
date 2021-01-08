@@ -3,6 +3,7 @@ package collector
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,6 +26,8 @@ type GdasOpts struct {
 
 // GdasClient 连接 Gdas 所需信息
 type GdasClient struct {
+	req    *http.Request
+	resp   *http.Response
 	Client *http.Client
 	Opts   *GdasOpts
 }
@@ -45,9 +48,9 @@ func (g *GdasClient) GetGdasToken() (err error) {
 	// 设置 URL
 	url := fmt.Sprintf("%v/v1/login", g.Opts.URL)
 	// 设置 Request 信息
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
-	req.Header.Add("referer", fmt.Sprintf("%v/v1/login", g.Opts.URL))
-	req.Header.Add("Content-Type", "application/json")
+	g.req, _ = http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
+	g.req.Header.Add("referer", fmt.Sprintf("%v/v1/login", g.Opts.URL))
+	g.req.Header.Add("Content-Type", "application/json")
 
 	// 忽略证书验证
 	tr := &http.Transport{
@@ -55,14 +58,13 @@ func (g *GdasClient) GetGdasToken() (err error) {
 	}
 
 	// 发送 Request 并获取 Response
-	resp, err := (&http.Client{Transport: tr}).Do(req)
-	if err != nil {
+	if g.resp, err = (&http.Client{Transport: tr}).Do(g.req); err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	defer g.resp.Body.Close()
 
 	// 处理 Response Body,并获取 Token
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(g.resp.Body)
 	if err != nil {
 		return
 	}
@@ -79,25 +81,23 @@ func (g *GdasClient) GetGdasToken() (err error) {
 // Request 建立与 Gdas 的连接，并返回 Response Body
 func (g *GdasClient) Request(endpoint string) (body []byte, err error) {
 	// 获取 Gdas 认证所需 Token
-	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token
-	if g.Opts.Token == "" {
+	if err = g.RequestCheck(endpoint); err != nil {
+		fmt.Println(err)
 		g.GetGdasToken()
 	}
 	fmt.Println("Gdas Token 为：", g.Opts.Token)
 
 	// 根据认证信息及 endpoint 参数，创建与 Gdas 的连接，并返回 Body 给每个 Metric 采集器
-	var resp *http.Response
 	url := g.Opts.URL + endpoint
 	log.Debugf("request url %s", url)
 
 	// 创建一个新的 Request
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
+	if g.req, err = http.NewRequest("GET", url, nil); err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(g.Opts.Username, g.Opts.password)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("token", g.Opts.Token)
+	g.req.SetBasicAuth(g.Opts.Username, g.Opts.password)
+	g.req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	g.req.Header.Set("token", g.Opts.Token)
 
 	// 忽略证书验证
 	tr := &http.Transport{
@@ -105,46 +105,85 @@ func (g *GdasClient) Request(endpoint string) (body []byte, err error) {
 	}
 
 	// 根据新建立的 Request，发起请求，并获取 Response
-	if resp, err = (&http.Client{Transport: tr}).Do(req); err != nil {
+	if g.resp, err = (&http.Client{Transport: tr}).Do(g.req); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer g.resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error handling request for %s http-statuscode: %s", endpoint, resp.Status)
+	if g.resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error handling request for %s http-statuscode: %s", endpoint, g.resp.Status)
 	}
 
 	// 处理 Response Body
-	if body, err = ioutil.ReadAll(resp.Body); err != nil {
+	if body, err = ioutil.ReadAll(g.resp.Body); err != nil {
 		return nil, err
 	}
 
 	return body, nil
 }
 
-// Ping 在 Collector 接口的实现方法 Collect() 中
+// RequestCheck 检查当前请求的认证信息是否正确
+func (g *GdasClient) RequestCheck(endpoint string) (err error) {
+	// 判断是否有 TOKEN
+	if g.Opts.Token == "" {
+		return fmt.Errorf("处理请求出错：没有 Token")
+	}
+
+	// 判断 TOKEN 是否可用
+	url := g.Opts.URL + endpoint
+	log.Debugf("request url %s", url)
+
+	// 创建一个新的 Request
+	g.req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	g.req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	g.req.Header.Set("token", g.Opts.Token)
+	g.req.Header.Add("referer", fmt.Sprintf("%v/v1/login", g.Opts.URL))
+
+	// 忽略证书验证
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	// 根据新建立的 Request，发起请求，并获取 Response
+	if g.resp, err = (&http.Client{Transport: tr}).Do(g.req); err != nil {
+		return err
+	}
+	defer g.resp.Body.Close()
+
+	if g.resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", endpoint, g.resp.Status)
+	}
+
+	return nil
+}
+
+// Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
-// func (g *GdasClient) Ping() (bool, error) {
-// 	// fmt.Println("每次从 Gdas 获取数据时，都会进行测试")
-// 	req, err := http.NewRequest("GET", g.Opts.URL+"/configurations", nil)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	req.SetBasicAuth(g.Opts.Username, g.Opts.password)
+func (g *GdasClient) Ping() (b bool, err error) {
+	if g.req, err = http.NewRequest("GET", g.Opts.URL+"/待求证健康检查接口", nil); err != nil {
+		return false, err
+	}
 
-// 	resp, err := g.Client.Do(req)
-// 	if err != nil {
-// 		return false, err
-// 	}
+	// 忽略证书验证
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 
-// 	resp.Body.Close()
+	if g.resp, err = (&http.Client{Transport: tr}).Do(g.req); err != nil {
+		return false, err
+	}
 
-// 	switch {
-// 	case resp.StatusCode == http.StatusOK:
-// 		return true, nil
-// 	case resp.StatusCode == http.StatusUnauthorized:
-// 		return false, errors.New("username or password incorrect")
-// 	default:
-// 		return false, fmt.Errorf("error handling request, http-statuscode: %s", resp.Status)
-// 	}
-// }
+	g.resp.Body.Close()
+
+	switch {
+	case g.resp.StatusCode == http.StatusOK:
+		return true, nil
+	case g.resp.StatusCode == http.StatusUnauthorized:
+		return false, errors.New("username or password incorrect")
+	default:
+		return false, fmt.Errorf("error handling request, http-statuscode: %s", g.resp.Status)
+	}
+}

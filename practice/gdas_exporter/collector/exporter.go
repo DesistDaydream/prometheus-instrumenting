@@ -121,10 +121,11 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	// 第一个 scrapeTime,开始统计 scrape 指标的耗时
 	scrapeTime := time.Now()
 
+	// TODO,接口待确认
 	// 检验目标服务器是否正常，每次执行 Collect 都会检查
 	// if pong, err := e.client.Ping(); pong != true || err != nil {
 	// 	log.WithFields(log.Fields{
-	// 		"url":      e.client.Opts.URL + "/configurations",
+	// 		"url":      e.client.Opts.URL + "/待求证健康检查接口",
 	// 		"username": e.client.Opts.Username,
 	// 	}).Error(err)
 	// 	e.metrics.GdasUP.Set(0)

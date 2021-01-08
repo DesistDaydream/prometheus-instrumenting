@@ -111,7 +111,7 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 	return body, nil
 }
 
-// Ping 在 Collector 接口的实现方法 Collect() 中
+// Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
 	// fmt.Println("每次从 Xsky 获取数据时，都会进行测试")
