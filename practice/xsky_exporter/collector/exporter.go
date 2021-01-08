@@ -134,7 +134,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	e.metrics.XskyUP.Set(1)
 	e.metrics.Error.Set(0)
 
-	// 对应第一个 scrapeTime，scrapeDurationDesc 这个 Metric 用于显示抓取标签为 reach 指标所消耗的时间
+	// 对应第一个 scrapeTime，显示 scrapeDurationDesc 这个 Metric 的标签为 reach 的时间。也就是检验目标服务器状态总共花了多长时间
 	ch <- prometheus.MustNewConstMetric(scrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "reach")
 
 	var wg sync.WaitGroup

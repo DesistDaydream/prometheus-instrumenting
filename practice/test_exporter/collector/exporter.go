@@ -1,20 +1,24 @@
 package collector
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	sc "github.com/DesistDaydream/exporter/practice/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	name      = "common_exporter"
-	namespace = "common"
+	name      = "xsky_exporter"
+	namespace = "xsky"
 	//Subsystem(s).
 	exporter = "exporter"
 )
@@ -40,13 +44,13 @@ var (
 // 只要 Exporter 实现了 prometheus.Collector，就可以调用 MustRegister() 将其注册到 prometheus 库中
 type Exporter struct {
 	//ctx      context.Context  //http timeout will work, don't need this
-	client   ClientInterface
-	scrapers []Scraper
+	client   *XskyClient
+	scrapers []sc.CommonScraper
 	metrics  Metrics
 }
 
 // NewExporter 实例化 Exporter
-func NewExporter(opts *Opts, metrics Metrics, scrapers []Scraper) (*Exporter, error) {
+func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []sc.CommonScraper) (*Exporter, error) {
 	uri := opts.URL
 	if !strings.Contains(uri, "://") {
 		uri = "http://" + uri
@@ -59,32 +63,35 @@ func NewExporter(opts *Opts, metrics Metrics, scrapers []Scraper) (*Exporter, er
 		return nil, fmt.Errorf("invalid Xsky URL: %s", uri)
 	}
 
-	// // 配置 http.Client 的信息
-	// rootCAs, err := x509.SystemCertPool()
+	// ######## 配置 http.Client 的信息 ########
+	rootCAs, err := x509.SystemCertPool()
 	// if err != nil {
 	// 	return nil, err
 	// }
-	// tlsClientConfig := &tls.Config{
-	// 	MinVersion: tls.VersionTLS12,
-	// 	RootCAs:    rootCAs,
-	// }
-	// if opts.Insecure {
-	// 	tlsClientConfig.InsecureSkipVerify = true
-	// }
-	// transport := &http.Transport{
-	// 	TLSClientConfig: tlsClientConfig,
-	// }
-	// c := &Client{
-	// 	Opts: opts,
-	// 	Client: &http.Client{
-	// 		Timeout:   opts.Timeout,
-	// 		Transport: transport,
-	// 	},
-	// }
-	// // 配置 http.Client 信息结束
+	// 初始化 TLS 相关配置信息
+	tlsClientConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    rootCAs,
+	}
+	// 可以通过命令行选项配置 TLS 的 InsecureSkipVerify
+	// 这个配置决定是否跳过 https 协议的验证过程，就是 curl 加不加 -k 选项。默认跳过
+	if opts.Insecure {
+		tlsClientConfig.InsecureSkipVerify = true
+	}
+	transport := &http.Transport{
+		TLSClientConfig: tlsClientConfig,
+	}
+	xc := &XskyClient{
+		Opts: opts,
+		Client: &http.Client{
+			Timeout:   opts.Timeout,
+			Transport: transport,
+		},
+	}
+	// ######## 配置 http.Client 信息结束 ########
 
 	return &Exporter{
-		client:   ClientInterfaceObject,
+		client:   xc,
 		metrics:  metrics,
 		scrapers: scrapers,
 	}, nil
@@ -117,14 +124,14 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	scrapeTime := time.Now()
 
 	// 检验目标服务器是否正常，每次执行 Collect 都会检查
-	// if pong, err := e.client.Ping(); pong != true || err != nil {
-	// 	log.WithFields(log.Fields{
-	// 		"url":      e.client.Opts.URL + "/configurations",
-	// 		"username": e.client.Opts.Username,
-	// 	}).Error(err)
-	// 	e.metrics.XskyUP.Set(0)
-	// 	e.metrics.Error.Set(1)
-	// }
+	if pong, err := e.client.Ping(); pong != true || err != nil {
+		log.WithFields(log.Fields{
+			"url":      e.client.Opts.URL + "/configurations",
+			"username": e.client.Opts.Username,
+		}).Error(err)
+		e.metrics.XskyUP.Set(0)
+		e.metrics.Error.Set(1)
+	}
 	e.metrics.XskyUP.Set(1)
 	e.metrics.Error.Set(0)
 
@@ -141,7 +148,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	for _, scraper := range e.scrapers {
 		wg.Add(1)
 		// go 协程，同时执行所有 Scraper
-		go func(scraper Scraper) {
+		go func(scraper sc.CommonScraper) {
 			defer wg.Done()
 			// 第二个 scrapeTime,开始统计 scrape 指标的耗时
 			label := scraper.Name()
