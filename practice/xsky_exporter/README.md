@@ -2,7 +2,7 @@
 
 ## 获取 TOKEN
 ```
-curl 'http://10.20.5.98:8056/api/v1/auth/tokens:login'   -H 'Content-Type: application/json'   --data-binary '{"auth":{"name":"admin","password":"admin"}}'
+curl -XPOST'http://10.20.5.98:8056/api/v1/auth/tokens:login'   -H 'Content-Type: application/json'   --data-binary '{"auth":{"name":"admin","password":"admin"}}'
 ```
 响应信息
 ```

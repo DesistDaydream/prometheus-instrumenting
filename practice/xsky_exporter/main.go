@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	"github.com/DesistDaydream/exporter/practice/xsky_exporter/collector"
 	"github.com/coreos/go-systemd/daemon"
@@ -34,17 +32,6 @@ var scrapers = map[collector.Scraper]bool{
 	collector.ScrapeCluster{}: true,
 	// ScrapeGc{}:          false,
 	// ScrapeRegistries{}:  false,
-}
-
-// setupSigusr1Trap is
-func setupSigusr1Trap() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGUSR1)
-	go func() {
-		for range c {
-			DumpStacks()
-		}
-	}()
 }
 
 // DumpStacks is
@@ -133,7 +120,7 @@ func main() {
 	reg.MustRegister(exporter)
 	// ######## Exporter 主要运行逻辑结束 ########
 
-	// 设置路由信息
+	// ######## 设置路由信息 ########
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
              <head><title>` + collector.Name() + `</title></head>
@@ -143,16 +130,14 @@ func main() {
              </body>
              </html>`))
 	})
-
 	http.Handle(*metricsPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorLog: logrus.StandardLogger()}))
-
 	http.HandleFunc("/-/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "ok")
 	})
+	// ######## 设置路由信息结束 ########
 
 	// 启动前检查并启动 Exporter
-	setupSigusr1Trap()
 	logrus.Info("Listening on address ", *listenAddress)
 	daemon.SdNotify(false, daemon.SdNotifyReady)
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {

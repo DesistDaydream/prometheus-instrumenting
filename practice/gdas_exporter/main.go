@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	"github.com/DesistDaydream/exporter/practice/gdas_exporter/collector"
 	"github.com/coreos/go-systemd/daemon"
@@ -24,17 +22,6 @@ var scrapers = map[collector.Scraper]bool{
 	collector.ScrapeMagazines{}: true,
 	// ScrapeGc{}:          false,
 	// ScrapeRegistries{}:  false,
-}
-
-// setupSigusr1Trap is
-func setupSigusr1Trap() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGUSR1)
-	go func() {
-		for range c {
-			DumpStacks()
-		}
-	}()
 }
 
 // DumpStacks is
@@ -144,7 +131,6 @@ func main() {
 	})
 
 	// 启动前检查并启动 Exporter
-	setupSigusr1Trap()
 	logrus.Info("Listening on address ", *listenAddress)
 	daemon.SdNotify(false, daemon.SdNotifyReady)
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {

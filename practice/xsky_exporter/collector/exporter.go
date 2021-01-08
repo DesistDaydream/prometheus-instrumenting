@@ -62,24 +62,24 @@ func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []Scraper) (*Exporter
 		return nil, fmt.Errorf("invalid Xsky URL: %s", uri)
 	}
 
+	// ######## 配置 http.Client 的信息 ########
 	rootCAs, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, err
-	}
-
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// 初始化 TLS 相关配置信息
 	tlsClientConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		RootCAs:    rootCAs,
 	}
-
+	// 可以通过命令行选项配置 TLS 的 InsecureSkipVerify
+	// 这个配置决定是否跳过 https 协议的验证过程，就是 curl 加不加 -k 选项。默认跳过
 	if opts.Insecure {
 		tlsClientConfig.InsecureSkipVerify = true
 	}
-
 	transport := &http.Transport{
 		TLSClientConfig: tlsClientConfig,
 	}
-
 	xc := &XskyClient{
 		Opts: opts,
 		Client: &http.Client{
@@ -87,6 +87,7 @@ func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []Scraper) (*Exporter
 			Transport: transport,
 		},
 	}
+	// ######## 配置 http.Client 信息结束 ########
 
 	return &Exporter{
 		client:   xc,
