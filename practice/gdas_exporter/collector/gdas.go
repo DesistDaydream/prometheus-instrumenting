@@ -13,6 +13,15 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+// GdasClient 连接 Gdas 所需信息
+type GdasClient struct {
+	req    *http.Request
+	resp   *http.Response
+	Client *http.Client
+	Token  string
+	Opts   *GdasOpts
+}
+
 // GdasOpts 登录 Gdas 所需属性
 type GdasOpts struct {
 	URL      string
@@ -21,15 +30,6 @@ type GdasOpts struct {
 	// 这俩是关于 http.Client 的选项
 	Timeout  time.Duration
 	Insecure bool
-}
-
-// GdasClient 连接 Gdas 所需信息
-type GdasClient struct {
-	req    *http.Request
-	resp   *http.Response
-	Client *http.Client
-	Token  string
-	Opts   *GdasOpts
 }
 
 // AddFlag use after set Opts
