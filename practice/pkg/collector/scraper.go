@@ -1,9 +1,6 @@
 package collector
 
 import (
-	"net/http"
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -21,8 +18,11 @@ type Scraper interface {
 	Help() string
 
 	// Scrape 是抓取器的具体行为。从客户端采集数据，并将其作为 Metric 通过 channel(通道) 发送。
-	Scrape(client *Client, ch chan<- prometheus.Metric) error
+	Scrape(client ClientInterface, ch chan<- prometheus.Metric) error
 }
+
+// ClientInterfaceObject is
+var ClientInterfaceObject ClientInterface
 
 // ClientInterface is
 type ClientInterface interface {
@@ -36,25 +36,25 @@ type OptsInterface interface {
 	AddFlag()
 }
 
-// Client 连接 Gdas 所需信息
-type Client struct {
-	req    *http.Request
-	resp   *http.Response
-	Client *http.Client
-	Token  string
-	Opts   *Opts
-}
-
-// Opts 登录 server 所需属性
-type Opts struct {
-	URL      string
-	Username string
-	password string
-	Timeout  time.Duration
-	Insecure bool
-}
-
 // InitServer is
 func InitServer() {
 
 }
+
+// // Client 连接 Gdas 所需信息
+// type Client struct {
+// 	req    *http.Request
+// 	resp   *http.Response
+// 	Client *http.Client
+// 	Token  string
+// 	Opts   *Opts
+// }
+
+// // Opts 登录 server 所需属性
+// type Opts struct {
+// 	URL      string
+// 	Username string
+// 	password string
+// 	Timeout  time.Duration
+// 	Insecure bool
+// }

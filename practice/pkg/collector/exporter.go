@@ -1,11 +1,8 @@
 package collector
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -43,7 +40,7 @@ var (
 // 只要 Exporter 实现了 prometheus.Collector，就可以调用 MustRegister() 将其注册到 prometheus 库中
 type Exporter struct {
 	//ctx      context.Context  //http timeout will work, don't need this
-	client   *Client
+	client   ClientInterface
 	scrapers []Scraper
 	metrics  Metrics
 }
@@ -62,32 +59,32 @@ func NewExporter(opts *Opts, metrics Metrics, scrapers []Scraper) (*Exporter, er
 		return nil, fmt.Errorf("invalid Xsky URL: %s", uri)
 	}
 
-	// 配置 http.Client 的信息
-	rootCAs, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, err
-	}
-	tlsClientConfig := &tls.Config{
-		MinVersion: tls.VersionTLS12,
-		RootCAs:    rootCAs,
-	}
-	if opts.Insecure {
-		tlsClientConfig.InsecureSkipVerify = true
-	}
-	transport := &http.Transport{
-		TLSClientConfig: tlsClientConfig,
-	}
-	c := &Client{
-		Opts: opts,
-		Client: &http.Client{
-			Timeout:   opts.Timeout,
-			Transport: transport,
-		},
-	}
-	// 配置 http.Client 信息结束
+	// // 配置 http.Client 的信息
+	// rootCAs, err := x509.SystemCertPool()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// tlsClientConfig := &tls.Config{
+	// 	MinVersion: tls.VersionTLS12,
+	// 	RootCAs:    rootCAs,
+	// }
+	// if opts.Insecure {
+	// 	tlsClientConfig.InsecureSkipVerify = true
+	// }
+	// transport := &http.Transport{
+	// 	TLSClientConfig: tlsClientConfig,
+	// }
+	// c := &Client{
+	// 	Opts: opts,
+	// 	Client: &http.Client{
+	// 		Timeout:   opts.Timeout,
+	// 		Transport: transport,
+	// 	},
+	// }
+	// // 配置 http.Client 信息结束
 
 	return &Exporter{
-		client:   c,
+		client:   ClientInterfaceObject,
 		metrics:  metrics,
 		scrapers: scrapers,
 	}, nil
