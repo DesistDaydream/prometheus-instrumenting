@@ -4,6 +4,8 @@ import (
 	simplejson "github.com/bitly/go-simplejson"
 )
 
+// 这里是采集指标的主要行为
+
 // HarborComponentStatue is
 type HarborComponentStatue struct {
 	ComponentNames  []string

@@ -6,6 +6,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// 在这里定义 Metrics 以及实现 prometheus.Collector 接口。
+// 想要采集多个指标，只需要在本代码的各个 XXXXX 部分添加即可。具体的采集实现，放在其他文件中。
+
 // HarborMetrics 应该采集的 Harbor 的 metrics
 type HarborMetrics struct {
 	HarborHealthStatus *prometheus.Desc
