@@ -21,7 +21,7 @@ import (
 // 用一个 map 来定义这些抓取器是否开启，key 为 collector.Scraper 接口类型，value 为 bool 类型。
 // 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
 var scrapers = map[collector.Scraper]bool{
-	collector.ScrapeCluster{}: true,
+	collector.ScrapeMagazines{}: true,
 	// ScrapeGc{}:          false,
 	// ScrapeRegistries{}:  false,
 }

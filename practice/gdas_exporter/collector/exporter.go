@@ -152,7 +152,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			label := scraper.Name()
 			scrapeTime := time.Now()
 			// 执行 Scrape 操作，也就是执行每个 Scraper 中的 Scrape() 方法，由于这些自定义的 Scraper 都实现了 Scraper 接口
-			// 所以 scraper.Scrape 这个调用，就是调用的当前循环体中，从 e.scrapers 数组中取到的值，也就是 collector.ScrapeCluster{} 这些结构体
+			// 所以 scraper.Scrape 这个调用，就是调用的当前循环体中，从 e.scrapers 数组中取到的值，也就是 collector.ScrapeMagazines{} 这些结构体
 			if err := scraper.Scrape(e.client, ch); err != nil {
 				log.WithField("scraper", scraper.Name()).Error(err)
 				e.metrics.ScrapeErrors.WithLabelValues(label).Inc()
