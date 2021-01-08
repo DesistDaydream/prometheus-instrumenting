@@ -6,7 +6,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/DesistDaydream/exporter/practice/gdas_exporter/collector"
+	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/gdas_exporter/collector"
+	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,7 +19,7 @@ import (
 // scrapers 列出了应该注册的所有 Scraper(抓取器)，以及默认情况下是否应该启用它们
 // 用一个 map 来定义这些抓取器是否开启，key 为 collector.Scraper 接口类型，value 为 bool 类型。
 // 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
-var scrapers = map[collector.Scraper]bool{
+var scrapers = map[scraper.CommonScraper]bool{
 	collector.ScrapeMagazines{}: true,
 	// ScrapeGc{}:          false,
 	// ScrapeRegistries{}:  false,
@@ -71,7 +72,7 @@ func main() {
 	// 1.生成抓取器的命令行标志，用于通过命令行控制开启哪些抓取器，说白了就是控制采集哪些指标
 	// 2.下面的 for 循环会通过命令行 flag 获取到的值，放到 scraperFlags 这个 map 中
 	// 3.然后在后面注册 Exporter 之前，先通过这个 map 中的键值对判断是否要把 value 为 true 的 抓取器 注册进去
-	scraperFlags := map[collector.Scraper]*bool{}
+	scraperFlags := map[scraper.CommonScraper]*bool{}
 	for scraper, enabledByDefault := range scrapers {
 		defaultOn := false
 		if enabledByDefault {
@@ -96,7 +97,7 @@ func main() {
 	//
 	// 获取所有通过命令行标志，设置开启的 scrapers(抓取器)。
 	// 不包含默认开启的，默认开启的在代码中已经指定了。
-	enabledScrapers := []collector.Scraper{}
+	enabledScrapers := []scraper.CommonScraper{}
 	for scraper, enabled := range scraperFlags {
 		if *enabled {
 			logrus.Info("Scraper enabled ", scraper.Name())

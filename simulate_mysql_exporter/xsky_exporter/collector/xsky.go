@@ -116,7 +116,7 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
 	// fmt.Println("每次从 Xsky 获取数据时，都会进行测试")
-	req, err := http.NewRequest("GET", x.Opts.URL+"/configurations", nil)
+	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
 	if err != nil {
 		return false, err
 	}

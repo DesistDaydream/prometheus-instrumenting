@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"runtime"
 
-	"github.com/DesistDaydream/exporter/practice/pkg/scraper"
-	"github.com/DesistDaydream/exporter/practice/test_exporter/collector"
+	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
+	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/xsky_exporter/collector"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,13 +32,6 @@ var scrapers = map[scraper.CommonScraper]bool{
 	collector.ScrapeCluster{}: true,
 	// ScrapeGc{}:          false,
 	// ScrapeRegistries{}:  false,
-}
-
-// DumpStacks is
-func DumpStacks() {
-	buf := make([]byte, 16384)
-	buf = buf[:runtime.Stack(buf, true)]
-	logrus.Printf("=== BEGIN goroutine stack dump ===\n%s\n=== END goroutine stack dump ===", buf)
 }
 
 // LogInit 日志功能初始化，若指定了 log-output 命令行标志，则将日志写入到文件中

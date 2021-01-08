@@ -86,7 +86,3 @@ curl 'http://10.20.5.98:8056/api/v1/cluster' -H 'Cookie:XMS_AUTH_TOKEN=de196a592
   }
 }
 ```
-
-# 构建
-`docker build -f xsky_exporter/Dockerfile -t lchdzh/xsky-exporter:v0.1 .`
-

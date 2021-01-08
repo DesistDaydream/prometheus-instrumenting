@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	// check interface
-	_ Scraper = ScrapeCluster{}
+	_ scraper.CommonScraper = ScrapeCluster{}
 
 	// 设置 Metric 的基本信息，从 xsky 的接口中获取 cluster 相关的数据。
 	// 由于 cluster 中包含大量内容，如果在抓取 Metrics 时，想要获取其中的所有数据
@@ -39,7 +40,7 @@ func (ScrapeCluster) Help() string {
 
 // Scrape 从客户端采集数据，并将其作为 Metric 通过 channel(通道) 发送。主要就是采集 Xsky 集群信息的具体行为。
 // 该方法用于为 ScrapeCluster 结构体实现 Scraper 接口
-func (ScrapeCluster) Scrape(client *XskyClient, ch chan<- prometheus.Metric) (err error) {
+func (ScrapeCluster) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metric) (err error) {
 	// 声明需要绑定的 响应体 与 结构体
 	var (
 		respBody []byte

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
@@ -44,12 +45,12 @@ var (
 type Exporter struct {
 	//ctx      context.Context  //http timeout will work, don't need this
 	client   *XskyClient
-	scrapers []Scraper
+	scrapers []scraper.CommonScraper
 	metrics  Metrics
 }
 
 // NewExporter 实例化 Exporter
-func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []Scraper) (*Exporter, error) {
+func NewExporter(opts *XskyOpts, metrics Metrics, scrapers []scraper.CommonScraper) (*Exporter, error) {
 	uri := opts.URL
 	if !strings.Contains(uri, "://") {
 		uri = "http://" + uri
@@ -125,8 +126,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	// 检验目标服务器是否正常，每次执行 Collect 都会检查
 	if pong, err := e.client.Ping(); pong != true || err != nil {
 		log.WithFields(log.Fields{
-			"url":      e.client.Opts.URL + "/configurations",
-			"username": e.client.Opts.Username,
+			"url": e.client.Opts.URL + "/health",
 		}).Error(err)
 		e.metrics.XskyUP.Set(0)
 		e.metrics.Error.Set(1)
@@ -144,25 +144,25 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	// 本代码中最核心的执行部分，通过一个 for 循环来执行所有经注册的 Scraper
 	// ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
 	// 由于所有自定义的 Scrapers 都实现了 Scraper 接口，所以这里的 e.scrapers 其实是那些 抓取器 结构体的集合
-	for _, scraper := range e.scrapers {
+	for _, s := range e.scrapers {
 		wg.Add(1)
 		// go 协程，同时执行所有 Scraper
-		go func(scraper Scraper) {
+		go func(s scraper.CommonScraper) {
 			defer wg.Done()
 			// 第二个 scrapeTime,开始统计 scrape 指标的耗时
-			label := scraper.Name()
+			label := s.Name()
 			scrapeTime := time.Now()
 			// 执行 Scrape 操作，也就是执行每个 Scraper 中的 Scrape() 方法，由于这些自定义的 Scraper 都实现了 Scraper 接口
 			// 所以 scraper.Scrape 这个调用，就是调用的当前循环体中，从 e.scrapers 数组中取到的值，也就是 collector.ScrapeCluster{} 这些结构体
-			if err := scraper.Scrape(e.client, ch); err != nil {
-				log.WithField("scraper", scraper.Name()).Error(err)
+			if err := s.Scrape(e.client, ch); err != nil {
+				log.WithField("scraper", s.Name()).Error(err)
 				e.metrics.ScrapeErrors.WithLabelValues(label).Inc()
 				e.metrics.Error.Set(1)
 			}
 			// 对应第二个 scrapeTime，scrapeDurationDesc 这个 Metric，用于显示抓取标签为 label(这是变量) 指标所消耗的时间
 			// 其实就是统计每个 Scraper 执行所消耗的时间
 			ch <- prometheus.MustNewConstMetric(scrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), label)
-		}(scraper)
+		}(s)
 	}
 }
 
