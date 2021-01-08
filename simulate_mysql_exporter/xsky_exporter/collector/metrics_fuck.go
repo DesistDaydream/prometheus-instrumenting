@@ -47,7 +47,7 @@ func (ScrapeFuck) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metri
 	)
 
 	// 根据 URI 获取 Response Body，获取 fuck 相关的信息。里面包含大量内容
-	url := "/v1/cluster"
+	url := "/v1/fuck"
 	if respBody, err = client.Request(url); err != nil {
 		return err
 	}

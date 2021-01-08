@@ -105,7 +105,7 @@ func main() {
 		}
 	}
 	// 实例化 Exporter，其中包括所有自定义的 Metrics
-	exporter, err := collector.NewExporter(opts, collector.NewMetrics(), enabledScrapers)
+	exporter, err := collector.NewExporter(opts, scraper.NewMetrics(), enabledScrapers)
 	if err != nil {
 		logrus.Fatal(err)
 	}
