@@ -21,10 +21,13 @@ type CommonScraper interface {
 	Scrape(client CommonClient, ch chan<- prometheus.Metric) error
 }
 
-// CommonClient 是连接 Server 的客户端接口，连接不同的 Server，实现不同。
-// 用于为 CommonScraper 接口的 Scrape 方法提供连接 Server 所需的信息。
-// 并且 Request 方法应该可以获取指定 API 下的 响应 Body，并提供给 CommonScraper.Scrape 用来处理这些信息，以便展示 Metrics
+// CommonClient 是连接 Server 的客户端接口，不同的 Server，客户端的信息不同。但是至少需要两种行为
+// 第一:根据给定的 API 与 Server 建立连接，并获取响应体
+// 第二:判断 Server 是否存活
+// 这个接口主要是用于为 CommonScraper 接口的 Scrape 方法提供连接 Server 所需的信息。
 type CommonClient interface {
+	// Request 获取指定 API 下的 响应 Body，并提供给 CommonScraper.Scrape 用来处理这些信息，以便展示 Metrics
 	Request(endpoint string) (body []byte, err error)
+	// Ping 每次获取 Metric 时，都会执行健康检查，检查 Server 端是否健康
 	Ping() (bool, error)
 }

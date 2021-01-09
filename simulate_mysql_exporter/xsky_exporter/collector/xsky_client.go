@@ -30,7 +30,44 @@ func Name() string {
 	return name
 }
 
-// XskyClient 连接 Xsky 所需信息
+// GetToken 获取 Xsky 认证所需 Token
+func GetToken(opts *XskyOpts) (token string, err error) {
+	// 设置 json 格式的 request body
+	jsonReqBody := []byte("{\"auth\":{\"name\":\"" + opts.Username + "\",\"password\":\"" + opts.password + "\"}}")
+	// 设置 URL
+	url := fmt.Sprintf("%v/api/v1/auth/tokens:login", opts.URL)
+	// 设置 Request 信息
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
+	req.Header.Add("Content-Type", "application/json")
+	// 忽略 TLS 的证书验证
+	ts := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	// 发送 Request 并获取 Response
+	resp, err := (&http.Client{Transport: ts}).Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	// 处理 Response Body,并获取 Token
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	jsonRespBody, err := simplejson.NewJson(respBody)
+	if err != nil {
+		return
+	}
+	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
+	token, _ = jsonRespBody.Get("token").Get("uuid").String()
+	fmt.Println("成功获取 Token！ ", token)
+	return
+}
+
+// ######## 从此处开始到文件结尾，都是关于配置连接 Xsky 的代码 ########
+
+// XskyClient 连接 Xsky 所需信息。实现了 CommonClient 接口
 type XskyClient struct {
 	Client *http.Client
 	Token  string
@@ -71,7 +108,12 @@ func NewXsykClient(opts *XskyOpts) *XskyClient {
 	}
 	// ######## 配置 http.Client 的信息结束 ########
 
-	token, _ := GetToken(opts)
+	//
+	token, err := GetToken(opts)
+	if err != nil {
+		panic(err)
+	}
+
 	return &XskyClient{
 		Opts:  opts,
 		Token: token,
@@ -80,41 +122,6 @@ func NewXsykClient(opts *XskyOpts) *XskyClient {
 			Transport: transport,
 		},
 	}
-}
-
-// GetToken 获取 Xsky 认证所需 Token
-func GetToken(opts *XskyOpts) (token string, err error) {
-	// 设置 json 格式的 request body
-	jsonReqBody := []byte("{\"auth\":{\"name\":\"" + opts.Username + "\",\"password\":\"" + opts.password + "\"}}")
-	// 设置 URL
-	url := fmt.Sprintf("%v/api/v1/auth/tokens:login", opts.URL)
-	// 设置 Request 信息
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
-	req.Header.Add("Content-Type", "application/json")
-	// 忽略 TLS 的证书验证
-	ts := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	// 发送 Request 并获取 Response
-	resp, err := (&http.Client{Transport: ts}).Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	// 处理 Response Body,并获取 Token
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	jsonRespBody, err := simplejson.NewJson(respBody)
-	if err != nil {
-		return
-	}
-	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
-	token, _ = jsonRespBody.Get("token").Get("uuid").String()
-	fmt.Println("成功获取 Token！ ", token)
-	return
 }
 
 // Request 建立与 Xsky 的连接，并返回 Response Body
@@ -161,7 +168,7 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
-	// fmt.Println("每次从 Xsky 获取数据时，都会进行测试")
+	// fmt.Println("每次从 Xsky 获取数据时，都会执行本块代码进行测试")
 	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
 	if err != nil {
 		return false, err

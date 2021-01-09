@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
@@ -196,24 +195,26 @@ func (g *GdasClient) RequestCheck(endpoint string) (err error) {
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (g *GdasClient) Ping() (b bool, err error) {
-	if g.req, err = http.NewRequest("GET", g.Opts.URL+"/待求证健康检查接口", nil); err != nil {
-		return false, err
-	}
+	fmt.Println("等控制台开发好之后，取消代码注释，并删除最后一行的 return。在这里定义探测控制台健康状态的行为，Gdas 没有可用的健康检查接口")
+	// if g.req, err = http.NewRequest("GET", g.Opts.URL+"/待求证健康检查接口", nil); err != nil {
+	// 	return false, err
+	// }
 
-	if g.resp, err = g.Client.Do(g.req); err != nil {
-		return false, err
-	}
+	// if g.resp, err = g.Client.Do(g.req); err != nil {
+	// 	return false, err
+	// }
 
-	g.resp.Body.Close()
+	// g.resp.Body.Close()
 
-	switch {
-	case g.resp.StatusCode == http.StatusOK:
-		return true, nil
-	case g.resp.StatusCode == http.StatusUnauthorized:
-		return false, errors.New("username or password incorrect")
-	default:
-		return false, fmt.Errorf("error handling request, http-statuscode: %s", g.resp.Status)
-	}
+	// switch {
+	// case g.resp.StatusCode == http.StatusOK:
+	// 	return true, nil
+	// case g.resp.StatusCode == http.StatusUnauthorized:
+	// 	return false, fmt.Errorf("username or password incorrect")
+	// default:
+	// 	return false, fmt.Errorf("error handling request, http-statuscode: %s", g.resp.Status)
+	// }
+	return true, nil
 }
 
 // GdasOpts 登录 Gdas 所需属性
