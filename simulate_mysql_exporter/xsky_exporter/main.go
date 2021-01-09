@@ -105,11 +105,10 @@ func main() {
 			enabledScrapers = append(enabledScrapers, scraper)
 		}
 	}
-	// 实例化 Exporter，其中包括所有自定义的 Metrics
-	exporter, err := scraper.NewExporter(xskyClient, scraper.NewMetrics(), enabledScrapers)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	// 实例化 Exporter，其中包括所有自定义的 Metrics。这里与 prometheus.Register() 的逻辑基本一致。
+	// NewExporter 的两个接口分别用来传递 连接Server的信息 以及 需要采集的Metrics
+	// 并且 NewExporter 返回的 Exporter 结构体，已经实现了 prometheus.Collector
+	exporter := scraper.NewExporter(xskyClient, enabledScrapers)
 	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(exporter)

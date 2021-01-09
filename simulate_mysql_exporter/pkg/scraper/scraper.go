@@ -7,7 +7,7 @@ import (
 //https://github.com/prometheus/mysqld_exporter/blob/master/collector/scraper.go
 
 // CommonScraper 接口是抓取器的最小接口，可让我们向本 exporter 添加新的 Prometheus 指标。
-// 可以这么理解，每个需要抓取的 Metric 及其行为，都会抽象成一个 **Scraper(抓取器)**。
+// 可以这么理解，每个抓取 Metric 的行为，都会抽象成一个 **Scraper(抓取器)**。
 // 并且，可以通过命令行标志来控制开启或关闭哪个抓取器
 // 注意：抓取器的 Name和Help 与 Metric 的 Name和Help 不是一个概念
 type CommonScraper interface {
@@ -22,7 +22,8 @@ type CommonScraper interface {
 }
 
 // CommonClient 是连接 Server 的客户端接口，连接不同的 Server，实现不同。
-// 用于为 CommonScraper 接口的 Scrape 方法提供连接 Server 所需的信息
+// 用于为 CommonScraper 接口的 Scrape 方法提供连接 Server 所需的信息。
+// 并且 Request 方法应该可以获取指定 API 下的 响应 Body，并提供给 CommonScraper.Scrape 用来处理这些信息，以便展示 Metrics
 type CommonClient interface {
 	Request(endpoint string) (body []byte, err error)
 	Ping() (bool, error)

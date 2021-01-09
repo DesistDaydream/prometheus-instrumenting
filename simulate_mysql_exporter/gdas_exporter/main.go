@@ -106,10 +106,7 @@ func main() {
 		}
 	}
 	// 实例化 Exporter，其中包括所有自定义的 Metrics
-	exporter, err := scraper.NewExporter(gdasClient, scraper.NewMetrics(), enabledScrapers)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	exporter := scraper.NewExporter(gdasClient, enabledScrapers)
 	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(exporter)
