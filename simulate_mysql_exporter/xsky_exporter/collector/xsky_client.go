@@ -13,8 +13,8 @@ import (
 
 	"github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	flag "github.com/spf13/pflag"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 )
 
 // XskyClient 连接 Xsky 所需信息
@@ -116,7 +116,7 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 Xsky 的连接，并返回 Body 给每个 Metric 采集器
 	var resp *http.Response
 	url := x.Opts.URL + endpoint
-	log.Debugf("request url %s", url)
+	logrus.Debugf("request url %s", url)
 
 	// 创建一个新的 Request
 	req, err := http.NewRequest("GET", url, nil)
@@ -184,9 +184,9 @@ type XskyOpts struct {
 
 // AddFlag use after set Opts
 func (o *XskyOpts) AddFlag() {
-	flag.StringVar(&o.URL, "xsky-server", "http://10.20.5.98:8056", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
-	flag.StringVar(&o.Username, "xsky-user", "admin", "xsky username")
-	flag.StringVar(&o.password, "xsky-pass", "admin", "xsky password")
-	flag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
-	flag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
+	pflag.StringVar(&o.URL, "xsky-server", "http://10.20.5.98:8056", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
+	pflag.StringVar(&o.Username, "xsky-user", "admin", "xsky username")
+	pflag.StringVar(&o.password, "xsky-pass", "admin", "xsky password")
+	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
+	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

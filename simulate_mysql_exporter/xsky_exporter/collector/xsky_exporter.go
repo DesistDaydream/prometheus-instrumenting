@@ -6,7 +6,7 @@ import (
 
 	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -69,7 +69,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	// 检验目标服务器是否正常，每次执行 Collect 都会检查
 	// 然后为 XskyUP 和 Error 这俩 Metrics 设置值。
 	if pong, err := e.client.Ping(); pong != true || err != nil {
-		log.WithFields(log.Fields{
+		logrus.WithFields(logrus.Fields{
 			"url": e.client.Opts.URL + "/health",
 		}).Error(err)
 		e.metrics.XskyUP.Set(0)
@@ -99,7 +99,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			// 执行 Scrape 操作，也就是执行每个 Scraper 中的 Scrape() 方法，由于这些自定义的 Scraper 都实现了 Scraper 接口
 			// 所以 scraper.Scrape 这个调用，就是调用的当前循环体中，从 e.scrapers 数组中取到的值，也就是 collector.ScrapeCluster{} 这些结构体
 			if err := s.Scrape(e.client, ch); err != nil {
-				log.WithField("scraper", s.Name()).Error(err)
+				logrus.WithField("scraper", s.Name()).Error(err)
 				e.metrics.ScrapeErrors.WithLabelValues(label).Inc()
 				e.metrics.Error.Set(1)
 			}
