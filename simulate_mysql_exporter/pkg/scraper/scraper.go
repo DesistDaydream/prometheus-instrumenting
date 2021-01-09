@@ -24,7 +24,6 @@ type CommonScraper interface {
 // CommonClient 是连接 Server 的客户端接口，连接不同的 Server，实现不同。
 // 用于为 CommonScraper 接口的 Scrape 方法提供连接 Server 所需的信息
 type CommonClient interface {
-	GetToken() (err error)
 	Request(endpoint string) (body []byte, err error)
 	Ping() (bool, error)
 }
