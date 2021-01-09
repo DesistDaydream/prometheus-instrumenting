@@ -2,16 +2,33 @@ package collector
 
 import (
 	"bytes"
-	"errors"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	log "github.com/sirupsen/logrus"
-	flag "github.com/spf13/pflag"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 )
+
+// 这三个常量用于给每个 Metrics 名字添加前缀
+const (
+	name      = "gdas_exporter"
+	namespace = "gdas"
+	//Subsystem(s).
+	exporter = "exporter"
+)
+
+// Name 用于给前端页面显示 const 常量中定义的内容
+func Name() string {
+	return name
+}
 
 // GdasClient 连接 Gdas 所需信息
 type GdasClient struct {
@@ -22,44 +39,75 @@ type GdasClient struct {
 	Opts   *GdasOpts
 }
 
-// GdasOpts 登录 Gdas 所需属性
-type GdasOpts struct {
-	URL      string
-	Username string
-	password string
-	// 这俩是关于 http.Client 的选项
-	Timeout  time.Duration
-	Insecure bool
-}
+// NewGdasClient 实例化 Gdas 客户端
+func NewGdasClient(opts *GdasOpts) *GdasClient {
+	uri := opts.URL
+	if !strings.Contains(uri, "://") {
+		uri = "http://" + uri
+	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		panic(fmt.Sprintf("invalid Gdas URL: %s", err))
+	}
+	if u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		panic(fmt.Sprintf("invalid Gdas URL: %s", uri))
+	}
 
-// AddFlag use after set Opts
-func (o *GdasOpts) AddFlag() {
-	flag.StringVar(&o.URL, "gdas-server", "https://172.38.30.192:8003", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
-	flag.StringVar(&o.Username, "gdas-user", "system", "gdas username")
-	flag.StringVar(&o.password, "gdas-pass", "d153850931040e5c81e1c7508ded25f5f0ae76cb57dc1997bc343b878946ba23", "gdas password")
-	flag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
-	flag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
+	// ######## 配置 http.Client 的信息 ########
+	rootCAs, err := x509.SystemCertPool()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// 初始化 TLS 相关配置信息
+	tlsClientConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    rootCAs,
+	}
+	// 可以通过命令行选项配置 TLS 的 InsecureSkipVerify
+	// 这个配置决定是否跳过 https 协议的验证过程，就是 curl 加不加 -k 选项。默认跳过
+	if opts.Insecure {
+		tlsClientConfig.InsecureSkipVerify = true
+	}
+	transport := &http.Transport{
+		TLSClientConfig: tlsClientConfig,
+	}
+	// ######## 配置 http.Client 的信息结束 ########
+
+	token, _ := GetToken(opts)
+	return &GdasClient{
+		Opts:  opts,
+		Token: token,
+		Client: &http.Client{
+			Timeout:   opts.Timeout,
+			Transport: transport,
+		},
+	}
 }
 
 // GetToken 获取 Gdas 认证所需 Token
-func (g *GdasClient) GetToken() (err error) {
+func GetToken(opts *GdasOpts) (token string, err error) {
 	// 设置 json 格式的 request body
-	jsonReqBody := []byte("{\"userName\":\"" + g.Opts.Username + "\",\"passWord\":\"" + g.Opts.password + "\"}")
+	jsonReqBody := []byte("{\"userName\":\"" + opts.Username + "\",\"passWord\":\"" + opts.password + "\"}")
 	// 设置 URL
-	url := fmt.Sprintf("%v/v1/login", g.Opts.URL)
+	url := fmt.Sprintf("%v/v1/login", opts.URL)
 	// 设置 Request 信息
-	g.req, _ = http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
-	g.req.Header.Add("referer", fmt.Sprintf("%v/v1/login", g.Opts.URL))
-	g.req.Header.Add("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
+	req.Header.Add("referer", fmt.Sprintf("%v/v1/login", opts.URL))
+	req.Header.Add("Content-Type", "application/json")
+	// 忽略 TLS 的证书验证
+	ts := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 
 	// 发送 Request 并获取 Response
-	if g.resp, err = g.Client.Do(g.req); err != nil {
+	resp, err := (&http.Client{Transport: ts}).Do(req)
+	if err != nil {
 		panic(err)
 	}
-	defer g.resp.Body.Close()
+	defer resp.Body.Close()
 
 	// 处理 Response Body,并获取 Token
-	respBody, err := ioutil.ReadAll(g.resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
@@ -68,8 +116,8 @@ func (g *GdasClient) GetToken() (err error) {
 		return
 	}
 	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
-	g.Token, _ = jsonRespBody.Get("token").String()
-	fmt.Println("成功获取 Token！ ", g.Token)
+	token, _ = jsonRespBody.Get("token").String()
+	fmt.Println("成功获取 Token！ ", token)
 	return
 }
 
@@ -78,13 +126,13 @@ func (g *GdasClient) Request(endpoint string) (body []byte, err error) {
 	// 获取 Gdas 认证所需 Token
 	if err = g.RequestCheck(endpoint); err != nil {
 		fmt.Println(err)
-		g.GetToken()
+		GetToken(g.Opts)
 	}
 	fmt.Println("Gdas Token 为：", g.Token)
 
 	// 根据认证信息及 endpoint 参数，创建与 Gdas 的连接，并返回 Body 给每个 Metric 采集器
 	url := g.Opts.URL + endpoint
-	log.Debugf("request url %s", url)
+	logrus.Debugf("request url %s", url)
 
 	// 创建一个新的 Request
 	if g.req, err = http.NewRequest("GET", url, nil); err != nil {
@@ -121,7 +169,7 @@ func (g *GdasClient) RequestCheck(endpoint string) (err error) {
 
 	// 判断 TOKEN 是否可用
 	url := g.Opts.URL + endpoint
-	log.Debugf("request url %s", url)
+	logrus.Debugf("request url %s", url)
 
 	// 创建一个新的 Request
 	g.req, err = http.NewRequest("GET", url, nil)
@@ -166,4 +214,23 @@ func (g *GdasClient) Ping() (b bool, err error) {
 	default:
 		return false, fmt.Errorf("error handling request, http-statuscode: %s", g.resp.Status)
 	}
+}
+
+// GdasOpts 登录 Gdas 所需属性
+type GdasOpts struct {
+	URL      string
+	Username string
+	password string
+	// 这俩是关于 http.Client 的选项
+	Timeout  time.Duration
+	Insecure bool
+}
+
+// AddFlag use after set Opts
+func (o *GdasOpts) AddFlag() {
+	pflag.StringVar(&o.URL, "gdas-server", "https://172.38.30.192:8003", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
+	pflag.StringVar(&o.Username, "gdas-user", "system", "gdas username")
+	pflag.StringVar(&o.password, "gdas-pass", "d153850931040e5c81e1c7508ded25f5f0ae76cb57dc1997bc343b878946ba23", "gdas password")
+	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
+	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

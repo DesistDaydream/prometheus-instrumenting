@@ -69,6 +69,7 @@ func main() {
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.XskyOpts{}
 	opts.AddFlag()
+	xskyClient := collector.NewXsykClient(opts)
 
 	// scraperFlags 也是一个 map，并且 key 为 collector.Scraper 接口类型，这一小段代码主要有下面几个作用
 	// 1.生成抓取器的命令行标志，用于通过命令行控制开启哪些抓取器，说白了就是控制采集哪些指标
@@ -105,7 +106,7 @@ func main() {
 		}
 	}
 	// 实例化 Exporter，其中包括所有自定义的 Metrics
-	exporter, err := collector.NewExporter(opts, scraper.NewMetrics(), enabledScrapers)
+	exporter, err := scraper.NewExporter(xskyClient, scraper.NewMetrics(), enabledScrapers)
 	if err != nil {
 		logrus.Fatal(err)
 	}

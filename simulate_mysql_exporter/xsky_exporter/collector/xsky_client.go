@@ -17,6 +17,19 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// 这三个常量用于给每个 Metrics 名字添加前缀
+const (
+	name      = "xsky_exporter"
+	namespace = "xsky"
+	//Subsystem(s).
+	exporter = "exporter"
+)
+
+// Name 用于给前端页面显示 const 常量中定义的内容
+func Name() string {
+	return name
+}
+
 // XskyClient 连接 Xsky 所需信息
 type XskyClient struct {
 	Client *http.Client
