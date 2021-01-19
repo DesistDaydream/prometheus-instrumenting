@@ -15,7 +15,8 @@ const (
 	exporter = "exporter"
 )
 
-// 这个指标用来统计，程序采集其他指标时所花费的时间
+// 本程序默认自带的 Metrics。
+// 这个 Metric 用来统计本程序采集其他指标时所花费的时间
 var (
 	ScrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, exporter, "collector_duration_seconds"),
@@ -24,12 +25,12 @@ var (
 	)
 )
 
-// Metrics 本程序默认自带的一些 Metrics
+// Metrics 本程序默认自带的一些 Metrics。与 ScrapeDurationDesc 指标一样。
 type Metrics struct {
 	TotalScrapes prometheus.Counter
 	ScrapeErrors *prometheus.CounterVec
 	Error        prometheus.Gauge
-	XskyUP       prometheus.Gauge
+	UP           prometheus.Gauge
 }
 
 // NewMetrics 实例化 Metrics，设定本程序默认自带的一些 Metrics 的信息
@@ -40,24 +41,24 @@ func NewMetrics() Metrics {
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "scrapes_total",
-			Help:      "Total number of times Xsky was scraped for metrics.",
+			Help:      "Total number of times Exporter was scraped for metrics.",
 		}),
 		ScrapeErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "scrape_errors_total",
-			Help:      "Total number of times an error occurred scraping a Xsky.",
+			Help:      "Total number of times an error occurred scraping a Exporter.",
 		}, []string{"collector"}),
 		Error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "last_scrape_error",
-			Help:      "Whether the last scrape of metrics from Xsky resulted in an error (1 for error, 0 for success).",
+			Help:      "Whether the last scrape of metrics from Exporter resulted in an error (1 for error, 0 for success).",
 		}),
-		XskyUP: prometheus.NewGauge(prometheus.GaugeOpts{
+		UP: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Name:      "up",
-			Help:      "Whether the Xsky is up.",
+			Help:      "Whether the Exporter is up.",
 		}),
 	}
 }
@@ -84,7 +85,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.metrics.TotalScrapes.Desc()
 	e.metrics.ScrapeErrors.Describe(ch)
 	ch <- e.metrics.Error.Desc()
-	ch <- e.metrics.XskyUP.Desc()
+	ch <- e.metrics.UP.Desc()
 }
 
 // Collect 实现 Collector 接口的方法
@@ -95,7 +96,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.metrics.TotalScrapes
 	e.metrics.ScrapeErrors.Collect(ch)
 	ch <- e.metrics.Error
-	ch <- e.metrics.XskyUP
+	ch <- e.metrics.UP
 }
 
 // scrape 调用每个已经注册的 Scraper(抓取器) 执行其代码中定义的抓取行为。
@@ -110,10 +111,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	// 然后为 XskyUP 和 Error 这俩 Metrics 设置值。
 	if pong, err := e.client.Ping(); pong != true || err != nil {
 		logrus.WithFields(logrus.Fields{"ping error": "健康检查失败"}).Error(err)
-		e.metrics.XskyUP.Set(0)
+		e.metrics.UP.Set(0)
 		e.metrics.Error.Set(1)
 	}
-	e.metrics.XskyUP.Set(1)
+	e.metrics.UP.Set(1)
 	e.metrics.Error.Set(0)
 
 	// 对应第一个 scrapeTime，显示 scrapeDurationDesc 这个 Metric 的标签为 reach 的时间。也就是检验目标服务器状态总共花了多长时间
