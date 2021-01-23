@@ -56,8 +56,9 @@ func LogInit(level, file string) error {
 }
 
 func main() {
-	// 设置命令行标志，开始
-	//
+	// ####################################
+	// ######## 设置命令行标志，开始 ########
+	// ####################################
 	listenAddress := pflag.String("web.listen-address", ":8080", "Address to listen on for web interface and telemetry.")
 	metricsPath := pflag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
@@ -87,8 +88,9 @@ func main() {
 	}
 	// 解析命令行标志
 	pflag.Parse()
-	//
-	// 设置命令行标志，结束
+	// ####################################
+	// ######## 设置命令行标志，结束 ########
+	// ####################################
 
 	// 初始化日志
 	if err := LogInit(*logLevel, *logFile); err != nil {

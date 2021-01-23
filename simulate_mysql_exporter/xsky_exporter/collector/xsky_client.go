@@ -61,7 +61,9 @@ func GetToken(opts *XskyOpts) (token string, err error) {
 		return
 	}
 	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
-	token, _ = jsonRespBody.Get("token").Get("uuid").String()
+	if token, err = jsonRespBody.Get("token").Get("uuid").String(); err != nil {
+		return "", fmt.Errorf("GetToken Error：%v", string(respBody))
+	}
 	fmt.Println("成功获取 Token！ ", token)
 	return
 }

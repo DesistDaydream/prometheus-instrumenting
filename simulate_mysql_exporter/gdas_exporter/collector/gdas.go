@@ -34,6 +34,48 @@ func Name() string {
 	return name
 }
 
+// GetToken 获取 Gdas 认证所需 Token
+func GetToken(opts *GdasOpts) (token string, err error) {
+	// 设置 json 格式的 request body
+	jsonReqBody := []byte("{\"userName\":\"" + opts.Username + "\",\"passWord\":\"" + opts.password + "\"}")
+	// 设置 URL
+	url := fmt.Sprintf("%v/v1/login", opts.URL)
+	// 设置 Request 信息
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Referer", fmt.Sprintf("%v/gdas", opts.URL))
+	req.Header.Add("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
+	// 忽略 TLS 的证书验证
+	ts := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	// 发送 Request 并获取 Response
+	resp, err := (&http.Client{Transport: ts}).Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	// 处理 Response Body,并获取 Token
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	jsonRespBody, err := simplejson.NewJson(respBody)
+	if err != nil {
+		return
+	}
+	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
+	if token, err = jsonRespBody.Get("token").String(); err != nil {
+		return "", fmt.Errorf("GetToken Error：%v", string(respBody))
+	}
+	fmt.Println("成功获取 Token! Token 为：", token)
+	return
+}
+
+// ######## 从此处开始到文件结尾，都是关于配置连接 Gdas 的代码 ########
+
 // GdasClient 连接 Gdas 所需信息
 type GdasClient struct {
 	req    *http.Request
@@ -77,7 +119,11 @@ func NewGdasClient(opts *GdasOpts) *GdasClient {
 	}
 	// ######## 配置 http.Client 的信息结束 ########
 
-	token, _ := GetToken(opts)
+	//
+	token, err := GetToken(opts)
+	if err != nil {
+		panic(err)
+	}
 	return &GdasClient{
 		Opts:  opts,
 		Token: token,
@@ -86,44 +132,6 @@ func NewGdasClient(opts *GdasOpts) *GdasClient {
 			Transport: transport,
 		},
 	}
-}
-
-// GetToken 获取 Gdas 认证所需 Token
-func GetToken(opts *GdasOpts) (token string, err error) {
-	// 设置 json 格式的 request body
-	jsonReqBody := []byte("{\"userName\":\"" + opts.Username + "\",\"passWord\":\"" + opts.password + "\"}")
-	// 设置 URL
-	url := fmt.Sprintf("%v/v1/login", opts.URL)
-	// 设置 Request 信息
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Referer", fmt.Sprintf("%v/gdas", opts.URL))
-	req.Header.Add("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
-	// 忽略 TLS 的证书验证
-	ts := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	// 发送 Request 并获取 Response
-	resp, err := (&http.Client{Transport: ts}).Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	// 处理 Response Body,并获取 Token
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	jsonRespBody, err := simplejson.NewJson(respBody)
-	if err != nil {
-		return
-	}
-	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
-	token, _ = jsonRespBody.Get("token").String()
-	fmt.Println("成功获取 Token! Token 为：", token)
-	return
 }
 
 // Request 建立与 Gdas 的连接，并返回 Response Body
@@ -192,6 +200,8 @@ func (g *GdasClient) Ping() (b bool, err error) {
 	}
 	return true, nil
 
+	// ！！！！！！坑！！！！！！Gdas 有问题，同一个接口不支持并发，并发请求时，100%出现问题
+	// ！！！！！！坑！！！！！！Gdas 有问题，同一个接口不支持并发，并发请求时，100%出现问题
 	// // 判断 TOKEN 是否可用
 	// url := g.Opts.URL + "/v1/nodeList"
 	// logrus.Debugf("Ping Request url %s", url)
