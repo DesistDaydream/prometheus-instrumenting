@@ -70,6 +70,7 @@ func main() {
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.XskyOpts{}
 	opts.AddFlag()
+	pflag.Parse() // 由于在 NewXskyClient() 时，需要用到命令行标志的值，所以在此先解析一下，后面还需要再解析一次以识别其他的命令行标志的值
 	xskyClient := collector.NewXsykClient(opts)
 
 	// scraperFlags 也是一个 map，并且 key 为 collector.Scraper 接口类型，这一小段代码主要有下面几个作用
