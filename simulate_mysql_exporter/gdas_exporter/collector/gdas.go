@@ -191,8 +191,8 @@ func (g *GdasClient) Ping() (b bool, err error) {
 	}
 
 	// 判断 TOKEN 是否可用
-	url := g.Opts.URL + "/v1/magazines"
-	logrus.Debugf("request url %s", url)
+	url := g.Opts.URL + "/v1/nodeList"
+	logrus.Debugf("Ping Request url %s", url)
 
 	// 生成 Request Header 中
 	// 毫秒时间戳
@@ -232,7 +232,7 @@ func (g *GdasClient) Ping() (b bool, err error) {
 
 	if g.resp.StatusCode != http.StatusOK {
 		if g.Token, err = GetToken(g.Opts); err != nil {
-			return false, fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", "/v1/magazines", g.resp.Status)
+			return false, fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", "/v1/nodeList", g.resp.Status)
 		}
 	}
 
