@@ -146,7 +146,7 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	g.req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	g.req.Header.Set("token", g.Token)
 	g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
-	fmt.Println(g.req.Body)
+	// fmt.Println(g.req.Body)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	if g.resp, err = g.Client.Do(g.req); err != nil {
