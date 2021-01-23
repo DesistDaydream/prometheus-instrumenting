@@ -21,7 +21,7 @@ import (
 // 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
 var scrapers = map[scraper.CommonScraper]bool{
 	collector.ScrapeMagazines{}: true,
-	// ScrapeGc{}:          false,
+	collector.ScrapeNodeList{}:  true,
 	// ScrapeRegistries{}:  false,
 }
 

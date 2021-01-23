@@ -266,7 +266,7 @@ type GdasOpts struct {
 func (o *GdasOpts) AddFlag() {
 	pflag.StringVar(&o.URL, "gdas-server", "https://172.38.30.192:8003", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "gdas-user", "system", "gdas username")
-	pflag.StringVar(&o.password, "gdas-pass", "Euleros!@#123", "gdas password")
+	pflag.StringVar(&o.password, "gdas-pass", "system", "gdas password")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }
