@@ -20,10 +20,9 @@ import (
 // 用一个 map 来定义这些抓取器是否开启，key 为 collector.Scraper 接口类型，value 为 bool 类型。
 // 凡是实现了 collector.Scraper 接口的结构体，都可以做作为该接口类型的值
 var scrapers = map[scraper.CommonScraper]bool{
-	collector.ScrapeMagazines{}:  true,
-	collector.ScrapeNodeList{}:   true,
-	collector.ScrapeMagazines2{}: true,
-	collector.ScrapeNodeList2{}:  true,
+	collector.ScrapeMagazines{}: true,
+	collector.ScrapeNodeList{}:  true,
+	// collector.ScrapeMagazines2{}: true,
 }
 
 // DumpStacks is

@@ -182,18 +182,15 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (g *GdasClient) Ping() (b bool, err error) {
 	fmt.Println("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
-	// if g.Token, err = GetToken(g.Opts); err != nil {
-	// 	return false, fmt.Errorf("处理请求出错：没有 Token")
-	// }
-	return true, nil
 	// // 判断是否有 TOKEN
-	// if g.Token == "" {
-	// 	fmt.Println("Token 为空，开始尝试获取 Token")
-	// 	if g.Token, err = GetToken(g.Opts); err != nil {
-	// 		return false, fmt.Errorf("处理请求出错：没有 Token")
-	// 	}
-	// 	return true, nil
-	// }
+	if g.Token == "" {
+		fmt.Println("Token 为空，开始尝试获取 Token")
+		if g.Token, err = GetToken(g.Opts); err != nil {
+			return false, fmt.Errorf("处理请求出错：没有 Token")
+		}
+		return true, nil
+	}
+	return true, nil
 
 	// // 判断 TOKEN 是否可用
 	// url := g.Opts.URL + "/v1/nodeList"
@@ -273,7 +270,7 @@ type GdasOpts struct {
 func (o *GdasOpts) AddFlag() {
 	pflag.StringVar(&o.URL, "gdas-server", "https://172.38.30.193:8003", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "gdas-user", "system", "gdas username")
-	pflag.StringVar(&o.password, "gdas-pass", "Euleros!@#123", "gdas password")
+	pflag.StringVar(&o.password, "gdas-pass", "", "gdas password")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

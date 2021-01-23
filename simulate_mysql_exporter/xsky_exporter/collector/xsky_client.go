@@ -70,11 +70,9 @@ func GetToken(opts *XskyOpts) (token string, err error) {
 
 // XskyClient 连接 Xsky 所需信息。实现了 CommonClient 接口
 type XskyClient struct {
-	Client  *http.Client
-	Token   string
-	Opts    *XskyOpts
-	Method  string
-	ReqBody io.Reader
+	Client *http.Client
+	Token  string
+	Opts   *XskyOpts
 }
 
 // NewXsykClient 实例化 Xsky 客户端
@@ -166,7 +164,7 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
 	var err error
-	// fmt.Println("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
+	fmt.Println("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
 	// 获取 Xsky 认证所需 Token
 	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
 	if x.Token == "" {
