@@ -2,13 +2,18 @@ package collector
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -95,7 +100,6 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Referer", fmt.Sprintf("%v/gdas", opts.URL))
 	req.Header.Add("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
-	fmt.Println(req.Header)
 	// 忽略 TLS 的证书验证
 	ts := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -125,28 +129,39 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 
 // Request 建立与 Gdas 的连接，并返回 Response Body
 func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
-	// 获取 Gdas 认证所需 Token
-	if err = g.RequestCheck(endpoint); err != nil {
-		fmt.Println(err)
-		if g.Token, err = GetToken(g.Opts); err != nil {
-			fmt.Println("建立连接时获取 Token 失败")
-		}
-	}
-	fmt.Println("Gdas Token 为：", g.Token)
-
 	// 根据认证信息及 endpoint 参数，创建与 Gdas 的连接，并返回 Body 给每个 Metric 采集器
 	url := g.Opts.URL + endpoint
 	logrus.Debugf("request url %s", url)
+
+	// 生成签名所需数据
+	// 毫秒时间戳
+	stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	// 随机数
+	randString := rand.Intn(100000)
+	// 随机数倒序
+	stringRand := []rune(strconv.Itoa(randString))
+	for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
+		stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
+	}
+	// 签名
+	signature := stime + strconv.Itoa(randString) + g.Token + string(stringRand)
+	h := sha256.New()
+	h.Write([]byte(signature))                     // 需要加密的字符串为
+	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
+	fmt.Println("加密字符串为：", signatureSha)
 
 	// 创建一个新的 Request
 	if g.req, err = http.NewRequest(method, url, reqBody); err != nil {
 		return nil, err
 	}
 	g.req.SetBasicAuth(g.Opts.Username, g.Opts.password)
-	g.req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	g.req.Header.Set("Content-Type", "application/json")
 	g.req.Header.Set("token", g.Token)
+	g.req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
+	g.req.Header.Set("nonce", strconv.Itoa(randString))
+	g.req.Header.Set("signature", signatureSha)
 	g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
-	// fmt.Println(g.req.Body)
+	// fmt.Println(signature)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	if g.resp, err = g.Client.Do(g.req); err != nil {
@@ -166,62 +181,78 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	return body, nil
 }
 
-// RequestCheck 检查当前请求的认证信息是否正确
-func (g *GdasClient) RequestCheck(endpoint string) (err error) {
+// Ping 在 Scraper 接口的实现方法 scrape() 中调用。
+// 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
+func (g *GdasClient) Ping() (b bool, err error) {
+	fmt.Println("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
 	// 判断是否有 TOKEN
 	if g.Token == "" {
-		return fmt.Errorf("处理请求出错：没有 Token")
+		if g.Token, err = GetToken(g.Opts); err != nil {
+			return false, fmt.Errorf("处理请求出错：没有 Token")
+		}
 	}
 
 	// 判断 TOKEN 是否可用
-	url := g.Opts.URL + endpoint
+	url := g.Opts.URL + "/v1/magazines"
 	logrus.Debugf("request url %s", url)
+
+	// 生成 Request Header 中
+	// 毫秒时间戳
+	stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	// 随机数
+	randString := rand.Intn(100000)
+	// 随机数倒序
+	stringRand := []rune(strconv.Itoa(randString))
+	for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
+		stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
+	}
+	// 签名
+	signature := stime + strconv.Itoa(randString) + g.Token + string(stringRand)
+	h := sha256.New()
+	h.Write([]byte(signature))                     // 需要加密的字符串为
+	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
+	fmt.Println("加密字符串为：", signatureSha)
 
 	// 创建一个新的 Request
 	g.req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
-	g.req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	g.req.Header.Set("Content-Type", "application/json")
 	g.req.Header.Set("token", g.Token)
-	g.req.Header.Add("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
+	g.req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
+	g.req.Header.Set("nonce", strconv.Itoa(randString))
+	g.req.Header.Set("signature", signatureSha)
+	g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	if g.resp, err = g.Client.Do(g.req); err != nil {
-		return err
+		return false, err
 	}
 	defer g.resp.Body.Close()
 
+	// 若状态码不为200，则说明 TOKEN 不可用，重新执行 GetToken 获取 Token
+
 	if g.resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", endpoint, g.resp.Status)
+		if g.Token, err = GetToken(g.Opts); err != nil {
+			return false, fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", "/v1/magazines", g.resp.Status)
+		}
 	}
 
-	return nil
-}
-
-// Ping 在 Scraper 接口的实现方法 scrape() 中调用。
-// 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
-func (g *GdasClient) Ping() (b bool, err error) {
-	fmt.Println("等控制台开发好之后，取消代码注释，并删除最后一行的 return。在这里定义探测控制台健康状态的行为，Gdas 没有可用的健康检查接口")
-	// if g.req, err = http.NewRequest("GET", g.Opts.URL+"/待求证健康检查接口", nil); err != nil {
-	// 	return false, err
-	// }
-
-	// if g.resp, err = g.Client.Do(g.req); err != nil {
-	// 	return false, err
-	// }
-
-	// g.resp.Body.Close()
-
-	// switch {
-	// case g.resp.StatusCode == http.StatusOK:
-	// 	return true, nil
-	// case g.resp.StatusCode == http.StatusUnauthorized:
-	// 	return false, fmt.Errorf("username or password incorrect")
-	// default:
-	// 	return false, fmt.Errorf("error handling request, http-statuscode: %s", g.resp.Status)
-	// }
-	return true, nil
+	switch {
+	case g.resp.StatusCode == http.StatusOK:
+		return true, nil
+	case g.resp.StatusCode == http.StatusUnauthorized:
+		if g.Token, err = GetToken(g.Opts); err != nil {
+			return false, errors.New("认证失败")
+		}
+		return true, nil
+	default:
+		if g.Token, err = GetToken(g.Opts); err != nil {
+			return false, fmt.Errorf("error handling request, http-statuscode: %s,http-ResponseBody：%s", g.resp.Status, g.resp.Body)
+		}
+		return true, nil
+	}
 }
 
 // GdasOpts 登录 Gdas 所需属性

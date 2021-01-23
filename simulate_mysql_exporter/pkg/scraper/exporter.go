@@ -108,7 +108,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	scrapeTime := time.Now()
 
 	// 检验目标服务器是否正常，每次执行 Collect 都会检查
-	// 然后为 XskyUP 和 Error 这俩 Metrics 设置值。
+	// 然后为 UP 和 Error 这俩 Metrics 设置值。
 	if pong, err := e.client.Ping(); pong != true || err != nil {
 		logrus.WithFields(logrus.Fields{"ping error": "健康检查失败"}).Error(err)
 		e.metrics.UP.Set(0)

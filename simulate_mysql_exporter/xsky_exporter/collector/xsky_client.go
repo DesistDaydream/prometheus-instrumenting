@@ -129,15 +129,6 @@ func NewXsykClient(opts *XskyOpts) *XskyClient {
 
 // Request 建立与 Xsky 的连接，并返回 Response Body
 func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
-	// 获取 Xsky 认证所需 Token
-	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token
-	if x.Token == "" {
-		if x.Token, err = GetToken(x.Opts); err != nil {
-			fmt.Println("建立连接时获取 Token 失败")
-		}
-	}
-	fmt.Println("Xsky Token 为：", x.Token)
-
 	// 根据认证信息及 endpoint 参数，创建与 Xsky 的连接，并返回 Body 给每个 Metric 采集器
 	var resp *http.Response
 	url := x.Opts.URL + endpoint
@@ -174,7 +165,17 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
-	// fmt.Println("每次从 Xsky 获取数据时，都会执行本块代码进行测试")
+	var err error
+	// fmt.Println("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
+	// 获取 Xsky 认证所需 Token
+	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
+	if x.Token == "" {
+		if x.Token, err = GetToken(x.Opts); err != nil {
+			fmt.Println("建立连接时获取 Token 失败")
+		}
+	}
+	fmt.Println("Xsky Token 为：", x.Token)
+
 	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
 	if err != nil {
 		return false, err
