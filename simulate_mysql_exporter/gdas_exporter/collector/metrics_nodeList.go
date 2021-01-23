@@ -15,8 +15,8 @@ var (
 	// 设置 Metric 的基本信息
 	nodelist = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "nodelist_info"),
-		"Gdas Magazines Info",
-		[]string{"node_name"}, nil,
+		"Gdas Node Info",
+		[]string{"node_ip", "node_name"}, nil,
 	)
 )
 
@@ -32,7 +32,7 @@ func (ScrapeNodeList) Name() string {
 // Help 指定自己定义的 抓取器 的帮助信息，这里的 Help 的内容将会作为命令行标志的帮助信息。与 Metric 的 Help 不是一个概念。
 // 该方法用于为 ScrapeNodeList 结构体实现 Scraper 接口
 func (ScrapeNodeList) Help() string {
-	return "Gdas Magazines Info"
+	return "Gdas Node Info"
 }
 
 // Scrape 从客户端采集数据，并将其作为 Metric 通过 channel(通道) 发送。主要就是采集 Gdas 集群信息的具体行为。
@@ -41,7 +41,7 @@ func (ScrapeNodeList) Scrape(client scraper.CommonClient, ch chan<- prometheus.M
 	// 声明需要绑定的 响应体 与 结构体
 	var (
 		respBody []byte
-		data     NodeLists
+		data     NodeListsData
 	)
 
 	// 根据 URI 获取 Response Body
@@ -58,15 +58,13 @@ func (ScrapeNodeList) Scrape(client scraper.CommonClient, ch chan<- prometheus.M
 	fmt.Printf("当前共有 %v 个节点\n", len(data.NodeList))
 
 	for i := 0; i < len(data.NodeList); i++ {
-		fmt.Println("节点名称为：", data.NodeList[i].DamName)
-		ch <- prometheus.MustNewConstMetric(nodelist, prometheus.GaugeValue, data.NodeList[i].Status, data.NodeList[i].DamName)
+		ch <- prometheus.MustNewConstMetric(nodelist, prometheus.GaugeValue, data.NodeList[i].Status, data.NodeList[i].IP, data.NodeList[i].DamName)
 	}
-
 	return nil
 }
 
-// NodeLists is
-type NodeLists struct {
+// NodeListsData is
+type NodeListsData struct {
 	Result   string     `json:"result"`
 	NodeList []NodeList `json:"nodeList"`
 }
@@ -74,6 +72,6 @@ type NodeLists struct {
 // NodeList is
 type NodeList struct {
 	IP      string  `json:"ip"`
-	Status  float64 `json:"status"` // 节点状态，0 为正常，1 为异常
+	Status  float64 `json:"status"`
 	DamName string  `json:"damName"`
 }

@@ -15,7 +15,7 @@ var (
 	// 设置 Metric 的基本信息
 	magazines2 = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "magazines2_info"),
-		"Gdas Magazines Info",
+		"Gdas Magazines2 Info",
 		[]string{"comments"}, nil,
 	)
 )
@@ -32,7 +32,7 @@ func (ScrapeMagazines2) Name() string {
 // Help 指定自己定义的 抓取器 的帮助信息，这里的 Help 的内容将会作为命令行标志的帮助信息。与 Metric 的 Help 不是一个概念。
 // 该方法用于为 ScrapeMagazines2 结构体实现 Scraper 接口
 func (ScrapeMagazines2) Help() string {
-	return "Gdas Magazines Info"
+	return "Gdas Magazines2 Info"
 }
 
 // Scrape 从客户端采集数据，并将其作为 Metric 通过 channel(通道) 发送。主要就是采集 Gdas 集群信息的具体行为。
@@ -66,15 +66,15 @@ func (ScrapeMagazines2) Scrape(client scraper.CommonClient, ch chan<- prometheus
 		}
 	}
 
-	fmt.Printf("第二个 magazines，当前分配了 %v 个盘匣\n", undistributedCount)
+	fmt.Printf("测试 magazines")
 	ch <- prometheus.MustNewConstMetric(magazines2, prometheus.GaugeValue, undistributedCount, "undistributedCount")
 	return nil
 }
 
 // Magazines2 is
 type Magazines2 struct {
-	Result string `json:"result"`
-	Rfid2  []Rfid `json:"rfid"`
+	Result string  `json:"result"`
+	Rfid2  []Rfid2 `json:"rfid"`
 }
 
 // Rfid2 is

@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -183,73 +182,81 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (g *GdasClient) Ping() (b bool, err error) {
 	fmt.Println("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
-	// 判断是否有 TOKEN
-	if g.Token == "" {
-		if g.Token, err = GetToken(g.Opts); err != nil {
-			return false, fmt.Errorf("处理请求出错：没有 Token")
-		}
-	}
+	// if g.Token, err = GetToken(g.Opts); err != nil {
+	// 	return false, fmt.Errorf("处理请求出错：没有 Token")
+	// }
+	return true, nil
+	// // 判断是否有 TOKEN
+	// if g.Token == "" {
+	// 	fmt.Println("Token 为空，开始尝试获取 Token")
+	// 	if g.Token, err = GetToken(g.Opts); err != nil {
+	// 		return false, fmt.Errorf("处理请求出错：没有 Token")
+	// 	}
+	// 	return true, nil
+	// }
 
-	// 判断 TOKEN 是否可用
-	url := g.Opts.URL + "/v1/nodeList"
-	logrus.Debugf("Ping Request url %s", url)
+	// // 判断 TOKEN 是否可用
+	// url := g.Opts.URL + "/v1/nodeList"
+	// logrus.Debugf("Ping Request url %s", url)
 
-	// 生成 Request Header 中
-	// 毫秒时间戳
-	stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
-	// 随机数
-	randString := rand.Intn(100000)
-	// 随机数倒序
-	stringRand := []rune(strconv.Itoa(randString))
-	for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
-		stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
-	}
-	// 签名
-	signature := stime + strconv.Itoa(randString) + g.Token + string(stringRand)
-	h := sha256.New()
-	h.Write([]byte(signature))                     // 需要加密的字符串为
-	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
+	// // 生成 Request Header 中
+	// // 毫秒时间戳
+	// stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	// // 随机数
+	// randString := rand.Intn(100000)
+	// // 随机数倒序
+	// stringRand := []rune(strconv.Itoa(randString))
+	// for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
+	// 	stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
+	// }
+	// // 签名
+	// signature := stime + strconv.Itoa(randString) + g.Token + string(stringRand)
+	// h := sha256.New()
+	// h.Write([]byte(signature))                     // 需要加密的字符串为
+	// signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
 
-	// 创建一个新的 Request
-	g.req, err = http.NewRequest("GET", url, nil)
-	if err != nil {
-		return false, err
-	}
-	g.req.Header.Set("Content-Type", "application/json")
-	g.req.Header.Set("token", g.Token)
-	g.req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
-	g.req.Header.Set("nonce", strconv.Itoa(randString))
-	g.req.Header.Set("signature", signatureSha)
-	g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
+	// // 创建一个新的 Request
+	// g.req, err = http.NewRequest("GET", url, nil)
+	// if err != nil {
+	// 	return false, err
+	// }
+	// g.req.Header.Set("Content-Type", "application/json")
+	// g.req.Header.Set("token", g.Token)
+	// g.req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
+	// g.req.Header.Set("nonce", strconv.Itoa(randString))
+	// g.req.Header.Set("signature", signatureSha)
+	// g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
 
-	// 根据新建立的 Request，发起请求，并获取 Response
-	if g.resp, err = g.Client.Do(g.req); err != nil {
-		return false, err
-	}
-	defer g.resp.Body.Close()
+	// // 根据新建立的 Request，发起请求，并获取 Response
+	// if g.resp, err = g.Client.Do(g.req); err != nil {
+	// 	return false, err
+	// }
+	// defer g.resp.Body.Close()
 
-	// 若状态码不为200，则说明 TOKEN 不可用，重新执行 GetToken 获取 Token
+	// // 若状态码不为200，则说明 TOKEN 不可用，重新执行 GetToken 获取 Token
 
-	if g.resp.StatusCode != http.StatusOK {
-		if g.Token, err = GetToken(g.Opts); err != nil {
-			return false, fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", "/v1/nodeList", g.resp.Status)
-		}
-	}
+	// if g.resp.StatusCode != http.StatusOK {
+	// 	if g.Token, err = GetToken(g.Opts); err != nil {
+	// 		return false, fmt.Errorf("error handling request for %s http-statuscode: %s，Token 不可用", "/v1/nodeList", g.resp.Status)
+	// 	}
+	// }
 
-	switch {
-	case g.resp.StatusCode == http.StatusOK:
-		return true, nil
-	case g.resp.StatusCode == http.StatusUnauthorized:
-		if g.Token, err = GetToken(g.Opts); err != nil {
-			return false, errors.New("认证失败")
-		}
-		return true, nil
-	default:
-		if g.Token, err = GetToken(g.Opts); err != nil {
-			return false, fmt.Errorf("error handling request, http-statuscode: %s,http-ResponseBody：%s", g.resp.Status, g.resp.Body)
-		}
-		return true, nil
-	}
+	// switch {
+	// case g.resp.StatusCode == http.StatusOK:
+	// 	return true, nil
+	// case g.resp.StatusCode == http.StatusUnauthorized:
+	// 	fmt.Println("认证检查失败，状态码为：", g.resp.Status)
+	// 	if g.Token, err = GetToken(g.Opts); err != nil {
+	// 		return false, fmt.Errorf("认证失败")
+	// 	}
+	// 	return true, nil
+	// default:
+	// 	fmt.Println("检查失败，状态码为：", g.resp.Status)
+	// 	if g.Token, err = GetToken(g.Opts); err != nil {
+	// 		return false, fmt.Errorf("error handling request, http-statuscode: %s,http-ResponseBody：%s", g.resp.Status, g.resp.Body)
+	// 	}
+	// 	return true, nil
+	// }
 }
 
 // GdasOpts 登录 Gdas 所需属性
@@ -264,9 +271,9 @@ type GdasOpts struct {
 
 // AddFlag use after set Opts
 func (o *GdasOpts) AddFlag() {
-	pflag.StringVar(&o.URL, "gdas-server", "https://172.38.30.192:8003", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
+	pflag.StringVar(&o.URL, "gdas-server", "https://172.38.30.193:8003", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "gdas-user", "system", "gdas username")
-	pflag.StringVar(&o.password, "gdas-pass", "system", "gdas password")
+	pflag.StringVar(&o.password, "gdas-pass", "Euleros!@#123", "gdas password")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }
