@@ -132,7 +132,9 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 	// 获取 Xsky 认证所需 Token
 	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token
 	if x.Token == "" {
-		GetToken(x.Opts)
+		if x.Token, err = GetToken(x.Opts); err != nil {
+			fmt.Println("建立连接时获取 Token 失败")
+		}
 	}
 	fmt.Println("Xsky Token 为：", x.Token)
 

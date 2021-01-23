@@ -94,6 +94,8 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Referer", fmt.Sprintf("%v/gdas", opts.URL))
+	req.Header.Add("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
+	fmt.Println(req.Header)
 	// 忽略 TLS 的证书验证
 	ts := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -117,17 +119,19 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	}
 	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
 	token, _ = jsonRespBody.Get("token").String()
-	fmt.Println("成功获取 Token！ ", token)
+	fmt.Println("成功获取 Token! Token 为：", token)
 	return
 }
 
 // Request 建立与 Gdas 的连接，并返回 Response Body
 func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 获取 Gdas 认证所需 Token
-	// if err = g.RequestCheck(endpoint); err != nil {
-	// 	fmt.Println(err)
-	GetToken(g.Opts)
-	// }
+	if err = g.RequestCheck(endpoint); err != nil {
+		fmt.Println(err)
+		if g.Token, err = GetToken(g.Opts); err != nil {
+			fmt.Println("建立连接时获取 Token 失败")
+		}
+	}
 	fmt.Println("Gdas Token 为：", g.Token)
 
 	// 根据认证信息及 endpoint 参数，创建与 Gdas 的连接，并返回 Body 给每个 Metric 采集器
@@ -141,7 +145,7 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	g.req.SetBasicAuth(g.Opts.Username, g.Opts.password)
 	g.req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	g.req.Header.Set("token", g.Token)
-	g.req.Header.Set("referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
+	g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
 	fmt.Println(g.req.Body)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
