@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -69,9 +70,11 @@ func GetToken(opts *XskyOpts) (token string, err error) {
 
 // XskyClient 连接 Xsky 所需信息。实现了 CommonClient 接口
 type XskyClient struct {
-	Client *http.Client
-	Token  string
-	Opts   *XskyOpts
+	Client  *http.Client
+	Token   string
+	Opts    *XskyOpts
+	Method  string
+	ReqBody io.Reader
 }
 
 // NewXsykClient 实例化 Xsky 客户端
@@ -125,7 +128,7 @@ func NewXsykClient(opts *XskyOpts) *XskyClient {
 }
 
 // Request 建立与 Xsky 的连接，并返回 Response Body
-func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
+func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 获取 Xsky 认证所需 Token
 	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token
 	if x.Token == "" {
@@ -139,7 +142,8 @@ func (x *XskyClient) Request(endpoint string) (body []byte, err error) {
 	logrus.Debugf("request url %s", url)
 
 	// 创建一个新的 Request
-	req, err := http.NewRequest("GET", url, nil)
+	// req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(method, url, reqBody)
 	if err != nil {
 		return nil, err
 	}

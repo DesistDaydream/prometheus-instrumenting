@@ -49,7 +49,7 @@ func (ScrapeDisk) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metri
 
 	// 根据 URI 获取 Response Body，获取 disk 相关的信息。里面包含大量内容
 	url := "/api/v1/disks"
-	if respBody, err = client.Request(url); err != nil {
+	if respBody, err = client.Request("GET", url, nil); err != nil {
 		return err
 	}
 

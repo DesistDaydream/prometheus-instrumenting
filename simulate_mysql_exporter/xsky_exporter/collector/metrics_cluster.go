@@ -49,7 +49,7 @@ func (ScrapeCluster) Scrape(client scraper.CommonClient, ch chan<- prometheus.Me
 
 	// 根据 URI 获取 Response Body，获取 cluster 相关的信息。里面包含大量内容
 	url := "/api/v1/cluster"
-	if respBody, err = client.Request(url); err != nil {
+	if respBody, err = client.Request("GET", url, nil); err != nil {
 		return err
 	}
 

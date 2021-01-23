@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"io"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -26,8 +28,8 @@ type CommonScraper interface {
 // 第二:判断 Server 是否存活
 // 这个接口主要是用于为 CommonScraper 接口的 Scrape 方法提供连接 Server 所需的信息。
 type CommonClient interface {
-	// Request 获取指定 API 下的 响应 Body，并提供给 CommonScraper.Scrape 用来处理这些信息，以便展示 Metrics
-	Request(endpoint string) (body []byte, err error)
+	// Request 获取指定 API 下的 响应 Body，并提供给 CommonScraper 接口下的 Scrape() 函数处理这些信息，以便展示 Metrics
+	Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error)
 	// Ping 每次获取 Metric 时，都会执行健康检查，检查 Server 端是否健康
 	Ping() (bool, error)
 }
