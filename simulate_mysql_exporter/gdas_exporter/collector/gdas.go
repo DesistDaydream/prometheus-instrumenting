@@ -148,7 +148,6 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	h := sha256.New()
 	h.Write([]byte(signature))                     // 需要加密的字符串为
 	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
-	fmt.Println("加密字符串为：", signatureSha)
 
 	// 创建一个新的 Request
 	if g.req, err = http.NewRequest(method, url, reqBody); err != nil {
@@ -161,7 +160,6 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	g.req.Header.Set("nonce", strconv.Itoa(randString))
 	g.req.Header.Set("signature", signatureSha)
 	g.req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
-	// fmt.Println(signature)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	if g.resp, err = g.Client.Do(g.req); err != nil {
@@ -211,7 +209,6 @@ func (g *GdasClient) Ping() (b bool, err error) {
 	h := sha256.New()
 	h.Write([]byte(signature))                     // 需要加密的字符串为
 	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
-	fmt.Println("加密字符串为：", signatureSha)
 
 	// 创建一个新的 Request
 	g.req, err = http.NewRequest("GET", url, nil)
