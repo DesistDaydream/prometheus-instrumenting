@@ -183,7 +183,7 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	if body, err = ioutil.ReadAll(g.resp.Body); err != nil {
 		return nil, err
 	}
-
+	logrus.Debugf("Response Status:\nResponseStatusCode：%v\nResponseBody：%v\n", g.resp.StatusCode, string(body))
 	return body, nil
 }
 

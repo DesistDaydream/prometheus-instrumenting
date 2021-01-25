@@ -159,7 +159,7 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 	if body, err = ioutil.ReadAll(resp.Body); err != nil {
 		return nil, err
 	}
-
+	// logrus.Debugf("Response Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(body))
 	return body, nil
 }
 
