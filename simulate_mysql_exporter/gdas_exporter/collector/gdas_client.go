@@ -52,8 +52,9 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 
 	// 发送 Request 并获取 Response
 	resp, err := (&http.Client{Transport: ts}).Do(req)
-	if err != nil {
-		panic(err)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		respBody, _ := ioutil.ReadAll(resp.Body)
+		return "", fmt.Errorf("GetToken Error: %v\nReason:%v", resp.StatusCode, string(respBody))
 	}
 	defer resp.Body.Close()
 
@@ -66,11 +67,11 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	if err != nil {
 		return
 	}
-	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
+	logrus.Debugf("Get Token Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(respBody))
 	if token, err = jsonRespBody.Get("token").String(); err != nil {
-		return "", fmt.Errorf("GetToken Error：%v", string(respBody))
+		return "", fmt.Errorf("GetToken Error：%v", err)
 	}
-	fmt.Println("成功获取 Token! Token 为：", token)
+	logrus.Debugf("Get Token Successed!Token is:%v ", token)
 	return
 }
 
@@ -189,15 +190,16 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (g *GdasClient) Ping() (b bool, err error) {
-	fmt.Println("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
+	logrus.Debugf("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
 	// // 判断是否有 TOKEN
 	if g.Token == "" {
-		fmt.Println("Token 为空，开始尝试获取 Token")
+		logrus.Debugf("Token 为空，开始尝试获取 Token")
 		if g.Token, err = GetToken(g.Opts); err != nil {
 			return false, fmt.Errorf("处理请求出错：没有 Token")
 		}
 		return true, nil
 	}
+	logrus.Debugf("Xsky Token 为: %s", g.Token)
 	return true, nil
 
 	// ！！！！！！坑！！！！！！Gdas 有问题，同一个接口不支持并发，并发请求时，100%出现问题

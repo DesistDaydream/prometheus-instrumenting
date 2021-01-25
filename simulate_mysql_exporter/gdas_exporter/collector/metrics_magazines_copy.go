@@ -66,7 +66,7 @@ func (ScrapeMagazines2) Scrape(client scraper.CommonClient, ch chan<- prometheus
 		}
 	}
 
-	fmt.Printf("测试 magazines")
+	fmt.Printf("测试 magazines\n")
 	ch <- prometheus.MustNewConstMetric(magazines2, prometheus.GaugeValue, undistributedCount, "undistributedCount")
 	return nil
 }

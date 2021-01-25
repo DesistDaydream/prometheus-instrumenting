@@ -46,8 +46,9 @@ func GetToken(opts *XskyOpts) (token string, err error) {
 	}
 	// 发送 Request 并获取 Response
 	resp, err := (&http.Client{Transport: ts}).Do(req)
-	if err != nil {
-		panic(err)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		respBody, _ := ioutil.ReadAll(resp.Body)
+		return "", fmt.Errorf("GetToken Error: %v\nResonse:%v", resp.StatusCode, string(respBody))
 	}
 	defer resp.Body.Close()
 
@@ -60,11 +61,11 @@ func GetToken(opts *XskyOpts) (token string, err error) {
 	if err != nil {
 		return
 	}
-	// fmt.Printf("本次响应的 Body 为：%v\n", string(respBody))
+	logrus.Debugf("Get Token Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(respBody))
 	if token, err = jsonRespBody.Get("token").Get("uuid").String(); err != nil {
-		return "", fmt.Errorf("GetToken Error：%v", string(respBody))
+		return "", fmt.Errorf("GetToken Error：%v", err)
 	}
-	fmt.Println("成功获取 Token！ ", token)
+	logrus.Debugf("Get Token Successed!Token is:%v ", token)
 	return
 }
 
@@ -166,15 +167,16 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (x *XskyClient) Ping() (bool, error) {
 	var err error
-	fmt.Println("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
+	logrus.Debugf("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
 	// 获取 Xsky 认证所需 Token
 	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
 	if x.Token == "" {
+		logrus.Debugf("Token 为空，开始尝试获取 Token")
 		if x.Token, err = GetToken(x.Opts); err != nil {
 			fmt.Println("建立连接时获取 Token 失败")
 		}
 	}
-	fmt.Println("Xsky Token 为：", x.Token)
+	logrus.Debugf("Xsky Token 为: %s", x.Token)
 
 	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
 	if err != nil {

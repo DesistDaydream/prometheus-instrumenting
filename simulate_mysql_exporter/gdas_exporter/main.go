@@ -68,8 +68,6 @@ func main() {
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.GdasOpts{}
 	opts.AddFlag()
-	pflag.Parse() // 由于在 NewGdasClient() 时，需要用到命令行标志的值，所以在此先解析一下，后面还需要再解析一次以识别其他的命令行标志的值
-	gdasClient := collector.NewGdasClient(opts)
 
 	// scraperFlags 也是一个 map，并且 key 为 collector.Scraper 接口类型，这一小段代码主要有下面几个作用
 	// 1.生成抓取器的命令行标志，用于通过命令行控制开启哪些抓取器，说白了就是控制采集哪些指标
@@ -86,7 +84,7 @@ func main() {
 		// 将命令行 flag 中获取到的值，赋到 map 中，作为 map 的 value
 		scraperFlags[scraper] = f
 	}
-	// 解析命令行标志
+	// 解析命令行标志,即：将命令行标志的值传递到代码的变量中。若不解析，则所有通过命令行标志设置的变量是没有值的。
 	pflag.Parse()
 	// ####################################
 	// ######## 设置命令行标志，结束 ########
@@ -109,6 +107,7 @@ func main() {
 		}
 	}
 	// 实例化 Exporter，其中包括所有自定义的 Metrics
+	gdasClient := collector.NewGdasClient(opts)
 	exporter := scraper.NewExporter(gdasClient, enabledScrapers)
 	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
