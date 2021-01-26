@@ -131,7 +131,6 @@ func NewXsykClient(opts *XskyOpts) *XskyClient {
 // Request 建立与 Xsky 的连接，并返回 Response Body
 func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 Xsky 的连接，并返回 Body 给每个 Metric 采集器
-	var resp *http.Response
 	url := x.Opts.URL + endpoint
 	logrus.Debugf("request url %s", url)
 
@@ -146,7 +145,8 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 	req.Header.Set("Xms-Auth-Token", x.Token)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
-	if resp, err = x.Client.Do(req); err != nil {
+	resp, err := x.Client.Do(req)
+	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -156,7 +156,8 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 	}
 
 	// 处理 Response Body
-	if body, err = ioutil.ReadAll(resp.Body); err != nil {
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
 		return nil, err
 	}
 	// logrus.Debugf("Response Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(body))
@@ -165,19 +166,21 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
-func (x *XskyClient) Ping() (bool, error) {
-	var err error
+func (x *XskyClient) Ping() (b bool, err error) {
 	logrus.Debugf("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
-	// 获取 Xsky 认证所需 Token
-	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
+	// 判断是否有 Token
 	if x.Token == "" {
 		logrus.Debugf("Token 为空，开始尝试获取 Token")
-		if x.Token, err = GetToken(x.Opts); err != nil {
-			fmt.Println("建立连接时获取 Token 失败")
+		x.Token, err = GetToken(x.Opts)
+		if err == nil {
+			return true, nil
 		}
+		return false, err
 	}
 	logrus.Debugf("Xsky Token 为: %s", x.Token)
 
+	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
+	logrus.Debugf("Ping Request url %s", x.Opts.URL+"/health")
 	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
 	if err != nil {
 		return false, err
