@@ -6,3 +6,8 @@ gdas_exporter 与 xsky_exporter 逻辑是一样的。属于高级练习，基于
 docker build -f simulate_mysql_exporter/xsky_exporter/Dockerfile -t lchdzh/xsky-exporter:v0.2 .
 docker build -f simulate_mysql_exporter/gdas_exporter/Dockerfile -t lchdzh/gdas-exporter:v0.2 .
 ```
+
+# 运行
+```
+docker run --rm --network=host --name xsky-exporter lchdzh/xsky-exporter:v0.2
+```
