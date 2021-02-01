@@ -67,7 +67,6 @@ func main() {
 	metricsPath := pflag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
 	logFile := pflag.String("log-output", "", "the file which log to, default stdout")
-	// pflag.StringVar(&collector.HarborVersion, "override-version", "", "override the harbor version")
 
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.XskyOpts{}

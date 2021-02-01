@@ -216,9 +216,9 @@ type XskyOpts struct {
 
 // AddFlag use after set Opts
 func (o *XskyOpts) AddFlag() {
-	pflag.StringVar(&o.URL, "xsky-server", "http://10.20.5.98:8056", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
+	pflag.StringVar(&o.URL, "xsky-server", "http://10.20.5.98:8056", "HTTP API address of a Xsky server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "xsky-user", "admin", "xsky username")
 	pflag.StringVar(&o.password, "xsky-pass", "", "xsky password")
-	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the harbor API.")
+	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the Xsky API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }
