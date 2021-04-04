@@ -24,9 +24,8 @@ import (
 // 这三个常量用于给每个 Metrics 名字添加前缀
 const (
 	name      = "gdas_exporter"
-	namespace = "gdas"
+	Namespace = "gdas"
 	//Subsystem(s).
-	exporter = "exporter"
 )
 
 // Name 用于给前端页面显示 const 常量中定义的内容
@@ -101,9 +100,9 @@ func NewGdasClient(opts *GdasOpts) *GdasClient {
 
 	// ######## 配置 http.Client 的信息 ########
 	rootCAs, err := x509.SystemCertPool()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	if err != nil {
+		panic(err)
+	}
 	// 初始化 TLS 相关配置信息
 	tlsClientConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,

@@ -14,7 +14,7 @@ var (
 
 	// 设置 Metric 的基本信息
 	nodelist2 = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "nodelist2_info"),
+		prometheus.BuildFQName(Namespace, "", "nodelist2_info"),
 		"Gdas Node Info",
 		[]string{"node_ip", "node_name"}, nil,
 	)

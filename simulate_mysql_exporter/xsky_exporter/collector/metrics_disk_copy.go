@@ -17,7 +17,7 @@ var (
 	// 由于 disk2 中包含大量内容，如果在抓取 Metrics 时，想要获取其中的所有数据
 	// 则可以将 disk2 的json格式的响应体中的 key 当作 metric 的标签值即可
 	disk2 = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "disk2_info"),
+		prometheus.BuildFQName(Namespace, "", "disk2_info"),
 		"Xsky Cluster Info",
 		[]string{"comments"}, nil,
 	)

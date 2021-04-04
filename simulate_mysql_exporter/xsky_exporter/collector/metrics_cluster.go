@@ -17,7 +17,7 @@ var (
 	// 由于 cluster 中包含大量内容，如果在抓取 Metrics 时，想要获取其中的所有数据
 	// 则可以将 cluster 的json格式的响应体中的 key 当作 metric 的标签值即可
 	cluster = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "cluster_info"),
+		prometheus.BuildFQName(Namespace, "", "cluster_info"),
 		"Xsky Cluster Info",
 		[]string{"comments"}, nil,
 	)

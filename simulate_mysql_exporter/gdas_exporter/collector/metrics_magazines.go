@@ -14,7 +14,7 @@ var (
 
 	// 设置 Metric 的基本信息
 	magazines = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "magazines_info"),
+		prometheus.BuildFQName(Namespace, "", "magazines_info"),
 		"Gdas Magazines Info",
 		[]string{"comments"}, nil,
 	)

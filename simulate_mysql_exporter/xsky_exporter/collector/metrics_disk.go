@@ -18,12 +18,12 @@ var (
 	// 由于 disk 中包含大量内容，如果在抓取 Metrics 时，想要获取其中的所有数据
 	// 则可以将 disk 的json格式的响应体中的 key 当作 metric 的标签值即可
 	diskStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "disk_status"),
+		prometheus.BuildFQName(Namespace, "", "disk_status"),
 		"Xsky Cluster Info",
 		[]string{"disk_id", "host_name"}, nil,
 	)
 	diskCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "disk_count"),
+		prometheus.BuildFQName(Namespace, "", "disk_count"),
 		"Xsky Cluster Info",
 		nil, nil,
 	)

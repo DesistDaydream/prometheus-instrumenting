@@ -60,6 +60,9 @@ func LogInit(level, file string) error {
 }
 
 func main() {
+	// 设置通用包中的指标的前缀
+	scraper.Namespace = collector.Namespace
+
 	// ####################################
 	// ######## 设置命令行标志，开始 ########
 	// ####################################

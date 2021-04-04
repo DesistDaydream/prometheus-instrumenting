@@ -8,25 +8,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	name      = "common_exporter"
-	namespace = "common"
-	//Subsystem(s).
-	exporter = "exporter"
-)
-
-// 本程序默认自带的 Metrics。
-// 这个 Metric 用来统计本程序采集其他指标时所花费的时间
 var (
-	ScrapeDurationDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, exporter, "collector_duration_seconds"),
-		"Collector time duration.",
-		[]string{"collector"}, nil,
-	)
+	Namespace string
+	//Subsystem(s).
+	Subsystem = "exporter"
 )
 
 // Metrics 本程序默认自带的一些 Metrics。与 ScrapeDurationDesc 指标一样。
 type Metrics struct {
+	DurationDesc *prometheus.Desc
 	TotalScrapes prometheus.Counter
 	ScrapeErrors *prometheus.CounterVec
 	Error        prometheus.Gauge
@@ -35,28 +25,33 @@ type Metrics struct {
 
 // NewMetrics 实例化 Metrics，设定本程序默认自带的一些 Metrics 的信息
 func NewMetrics() Metrics {
-	subsystem := exporter
 	return Metrics{
+		DurationDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, Subsystem, "collector_duration_seconds"),
+			"Collector time duration.",
+			[]string{"collector"}, nil,
+		),
 		TotalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: Namespace,
+			Subsystem: Subsystem,
 			Name:      "scrapes_total",
 			Help:      "Total number of times Exporter was scraped for metrics.",
 		}),
 		ScrapeErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: Namespace,
+			Subsystem: Subsystem,
 			Name:      "scrape_errors_total",
 			Help:      "Total number of times an error occurred scraping a Exporter.",
 		}, []string{"collector"}),
 		Error: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: Namespace,
+			Subsystem: Subsystem,
 			Name:      "last_scrape_error",
 			Help:      "Whether the last scrape of metrics from Exporter resulted in an error (1 for error, 0 for success).",
 		}),
 		UP: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
+			Namespace: Namespace,
+			Subsystem: Subsystem,
 			Name:      "up",
 			Help:      "Whether the Exporter is up.",
 		}),
@@ -118,7 +113,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	e.metrics.Error.Set(0)
 
 	// 对应第一个 scrapeTime，显示 scrapeDurationDesc 这个 Metric 的标签为 reach 的时间。也就是检验目标服务器状态总共花了多长时间
-	ch <- prometheus.MustNewConstMetric(ScrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "reach")
+	ch <- prometheus.MustNewConstMetric(e.metrics.DurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), "reach")
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
@@ -144,7 +139,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			}
 			// 对应第二个 scrapeTime，scrapeDurationDesc 这个 Metric，用于显示抓取标签为 label(这是变量) 指标所消耗的时间
 			// 其实就是统计每个 Scraper 执行所消耗的时间
-			ch <- prometheus.MustNewConstMetric(ScrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), label)
+			ch <- prometheus.MustNewConstMetric(e.metrics.DurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds(), label)
 		}(scraper)
 	}
 }
