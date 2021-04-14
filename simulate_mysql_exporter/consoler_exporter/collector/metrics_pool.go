@@ -21,7 +21,7 @@ var (
 	PoolStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_pool_status"),
 		"盘匣组状态.0-空闲,1-刻录",
-		[]string{"poolCanDel_flag", "type", "defaultMgz", "pool_name", "user", "pool_raidLvl", "autoAddMgz"}, nil,
+		[]string{"pool_can_del_flag", "type", "default_mgz", "pool_name", "user", "pool_raidLvl", "auto_add_mgz"}, nil,
 	)
 
 	// 盘匣组存储总空间

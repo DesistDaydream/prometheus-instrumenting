@@ -20,7 +20,7 @@ var (
 	NodeStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_node_status"),
 		"节点状态:0-活跃,1-异常",
-		[]string{"damName", "ip"}, nil,
+		[]string{"dam_name", "ip"}, nil,
 	)
 	// 节点总缓存容量
 	NodeTotalCacheSize = prometheus.NewDesc(

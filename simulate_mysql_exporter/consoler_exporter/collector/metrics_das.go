@@ -21,19 +21,19 @@ var (
 	DasStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_das_status"),
 		"盘库状态.0-连接正常,-203-盘匣弹出中,-210-仓架解锁中,-202-系统繁忙,-102-断开连接,-100&&-103-识别中",
-		[]string{"damName", "ip", "daName", "daNo", "daVendor"}, nil,
+		[]string{"dam_name", "ip", "da_name", "da_no", "da_vendor"}, nil,
 	)
 	// 盘库注册、断开状态
 	DasOffline = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_das_offline"),
 		"盘库注册、断开状态.0-已断开,1-已注册",
-		[]string{"damName", "ip", "daName", "daNo", "daVendor"}, nil,
+		[]string{"dam_name", "ip", "da_name", "da_no", "da_vendor"}, nil,
 	)
 	// 盘库所具有的槽位总数
 	DasSlotCount = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_das_slot_count"),
 		"盘库所具有的槽位总数，槽位就是可以插盘匣的位置",
-		[]string{"damName", "ip", "daName", "daNo", "daVendor"}, nil,
+		[]string{"dam_name", "ip", "da_name", "da_no", "da_vendor"}, nil,
 	)
 )
 
