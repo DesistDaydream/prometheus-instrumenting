@@ -51,7 +51,7 @@ func main() {
 	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
 	logFile := pflag.String("log-output", "", "the file which log to, default stdout")
 
-	opts := &collector.XskyOpts{}
+	opts := &collector.HWObsOpts{}
 	opts.AddFlag()
 
 	scraperFlags := map[scraper.CommonScraper]*bool{}
@@ -79,8 +79,8 @@ func main() {
 			enabledScrapers = append(enabledScrapers, scraper)
 		}
 	}
-	xskyClient := collector.NewXsykClient(opts)
-	exporter := scraper.NewExporter(xskyClient, enabledScrapers)
+	hwObsClient := collector.NewHWObsClient(opts)
+	exporter := scraper.NewExporter(hwObsClient, enabledScrapers)
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(exporter)
 
