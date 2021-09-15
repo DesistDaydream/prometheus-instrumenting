@@ -2,7 +2,7 @@ name: Container Images Sync
 on:
   push:
     branches:
-    - main
+    - e37-exporter
 jobs:
   build:
     runs-on: ubuntu-latest
