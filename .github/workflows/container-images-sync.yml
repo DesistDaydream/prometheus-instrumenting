@@ -12,7 +12,7 @@ jobs:
       uses: docker/login-action@v1
       with:
         registry: ghcr.io
-        username: ${{ github.repository_owner }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
     
     - name: docker build
@@ -21,4 +21,4 @@ jobs:
       #   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       run: |
         sudo docker build -f simulate_mysql_exporter/e37_exporter/Dockerfile -t ghcr.io/desistdaydream/e37-exporter:v0.2.0 .
-        sudo docker push  ghcr.io/desistdaydream/e37-exporter:v0.2.0
+        sudo docker push ghcr.io/desistdaydream/e37-exporter:v0.2.0
