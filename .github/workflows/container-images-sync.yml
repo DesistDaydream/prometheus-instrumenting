@@ -22,7 +22,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v1
       with:
-        context: ./simulate_mysql_exporter/e37_exporter/
+        context: .
         push: true
         tags: ghcr.io/desistdaydream/e37-exporter:v0.2.0
     
@@ -31,5 +31,6 @@ jobs:
     #     REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
     #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
     #   run: |
+    #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
     #     sudo docker build -f simulate_mysql_exporter/e37_exporter/Dockerfile -t ghcr.io/desistdaydream/e37-exporter:v0.2.0 .
     #     sudo docker push ghcr.io/desistdaydream/e37-exporter:v0.2.0
