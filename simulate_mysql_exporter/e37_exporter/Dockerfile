@@ -9,7 +9,7 @@ COPY go.sum go.sum
 RUN go mod download
 
 COPY ./ /root/exporter
-RUN go build -o e37-exporter ./e37_exporter/*.go
+RUN go build -o e37-exporter ./simulate_mysql_exporter/e37_exporter/*.go
 
 FROM alpine
 WORKDIR /root/exporter
