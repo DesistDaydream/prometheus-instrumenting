@@ -12,6 +12,7 @@ COPY ./ /root/exporter
 RUN go build -o e37-exporter ./simulate_mysql_exporter/e37_exporter/*.go
 
 FROM alpine
+LABEL org.opencontainers.image.source https://github.com/DesistDaydream/exporter
 WORKDIR /root/exporter
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk update && \
