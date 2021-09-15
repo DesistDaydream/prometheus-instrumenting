@@ -13,4 +13,4 @@ jobs:
       #   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       #   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        sudo docker build -f e37_exporter/Dockerfile -t lchdzh/e37-exporter:v0.2.0 .
+        sudo docker build -f simulate_mysql_exporter/e37_exporter/Dockerfile -t lchdzh/e37-exporter:v0.2.0 .
