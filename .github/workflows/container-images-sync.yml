@@ -9,8 +9,10 @@ jobs:
     - name: Check out repository code
       uses: actions/checkout@v2
     - name: docker build
-      # env:
-      #   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      #   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      env:
+        REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       run: |
-        sudo docker build -f simulate_mysql_exporter/e37_exporter/Dockerfile -t lchdzh/e37-exporter:v0.2.0 .
+        sudo docker login --username=${REGISTRY_USERNAME} --password=${REGISTRY_PASSWORD} ghcr.io
+        sudo docker build -f simulate_mysql_exporter/e37_exporter/Dockerfile -t ghcr.io/DesistDaydream/e37-exporter:v0.2.0 .
+        sudo docker push  ghcr.io/DesistDaydream/e37-exporter:v0.2.0
