@@ -4,7 +4,7 @@ COPY ./ ./
 ENV CGO_ENABLED=0 \
     GO111MODULE=on \
     GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,https://goproxy.io,direct
-RUN go build ./consoler_exporter/*.go
+RUN go build ./simulate_mysql_exporter/console_agent_exporter/*.go
 
 FROM alpine
 WORKDIR /root/exporter
