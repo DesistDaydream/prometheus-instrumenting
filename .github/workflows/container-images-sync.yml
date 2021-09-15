@@ -1,7 +1,8 @@
 name: Container Images Sync
 on:
-  # 取消 push 的注释后，向本仓库推送代码即可开始 Gitee 同步
   push:
+    branches:
+    - main
 jobs:
   build:
     runs-on: ubuntu-latest
