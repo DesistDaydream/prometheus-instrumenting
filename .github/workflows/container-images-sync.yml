@@ -14,17 +14,17 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v1
-        with:
-          images: ghcr.io/desistdaydream/e37-exporter:v0.2.0
-      - name: Build and push Docker image
-        uses: docker/build-push-action@av1
-        with:
-          context: ./simulate_mysql_exporter/e37_exporter/
-          push: true
-          tags: ghcr.io/desistdaydream/e37-exporter:v0.2.0
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v1
+      with:
+        images: ghcr.io/desistdaydream/e37-exporter:v0.2.0
+    - name: Build and push Docker image
+      uses: docker/build-push-action@av1
+      with:
+        context: ./simulate_mysql_exporter/e37_exporter/
+        push: true
+        tags: ghcr.io/desistdaydream/e37-exporter:v0.2.0
     
     # - name: docker build
     #   env:
