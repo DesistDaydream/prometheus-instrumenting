@@ -1,0 +1,16 @@
+name: Container Images Sync
+on:
+  # 取消 push 的注释后，向本仓库推送代码即可开始 Gitee 同步
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v2
+    - name: docker build
+      # env:
+      #   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      #   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        sudo docker build -f e37_exporter/Dockerfile -t lchdzh/e37-exporter:v0.2.0 .
