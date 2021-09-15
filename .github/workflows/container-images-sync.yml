@@ -20,7 +20,7 @@ jobs:
       with:
         images: ghcr.io/desistdaydream/e37-exporter:v0.2.0
     - name: Build and push Docker image
-      uses: docker/build-push-action@av1
+      uses: docker/build-push-action@v1
       with:
         context: ./simulate_mysql_exporter/e37_exporter/
         push: true
