@@ -108,6 +108,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		logrus.WithFields(logrus.Fields{"ping error": "健康检查失败"}).Error(err)
 		e.metrics.UP.Set(0)
 		e.metrics.Error.Set(1)
+		return
 	}
 	e.metrics.UP.Set(1)
 	e.metrics.Error.Set(0)

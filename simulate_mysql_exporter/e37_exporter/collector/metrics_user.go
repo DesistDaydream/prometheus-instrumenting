@@ -66,7 +66,6 @@ func (ScrapeUsers) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 	// 声明需要绑定的 响应体 与 结构体
 	var (
 		usersListData usersList
-		userData      user
 	)
 
 	url := "/api/rgw/user"
@@ -89,15 +88,16 @@ func (ScrapeUsers) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 	defer wg.Wait()
 
 	// 用来控制并发数量
-	concurrenceControl := make(chan bool, 3)
+	concurrenceControl := make(chan bool, 10)
 
-	for index, user := range usersListData.Keys {
+	for _, userName := range usersListData.Keys {
 		concurrenceControl <- true
 		wg.Add(1)
-		userUrl := "/api/rgw/user/" + user
+		userUrl := "/api/rgw/user/" + userName
 		userMethod := "GET"
 		go func(userUrl string) {
 			defer wg.Done()
+			var userData user
 			respBodyUser, err := client.Request(userMethod, userUrl, nil)
 			if err != nil {
 				logrus.Errorf("获取 %v 用户数据失败，原因:%v", userUrl, err)
@@ -130,7 +130,7 @@ func (ScrapeUsers) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 				<-concurrenceControl
 			}
 		}(userUrl)
-		logrus.Debugf("用户计数:%v\n", index)
+		// logrus.Debugf("用户计数:%v\n", index)
 		// if index > 20 {
 		// 	break
 		// }

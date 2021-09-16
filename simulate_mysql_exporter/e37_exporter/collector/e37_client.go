@@ -38,9 +38,6 @@ func GetToken(opts *E37Opts) (token string, err error) {
 	url := fmt.Sprintf("%v/api/auth", opts.URL)
 	// 设置 Request 信息
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
-	// req.Header.Add("Accept", "")
-	// req.Header.Add("Content-Type", "")
-	req.Header.Set("User-Agent", "apifox/1.0.0 (https://www.apifox.cn)")
 	req.Header.Set("Content-Type", "application/json")
 	// 忽略 TLS 的证书验证
 	ts := &http.Transport{

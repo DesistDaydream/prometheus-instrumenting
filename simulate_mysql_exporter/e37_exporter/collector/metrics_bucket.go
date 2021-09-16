@@ -120,7 +120,6 @@ func (ScrapeBuckets) Scrape(client scraper.CommonClient, ch chan<- prometheus.Me
 	// 声明需要绑定的 响应体 与 结构体
 	var (
 		bucketsList bucketsList
-		bucketData  bucket
 	)
 
 	url := "/api/rgw/bucket"
@@ -143,15 +142,16 @@ func (ScrapeBuckets) Scrape(client scraper.CommonClient, ch chan<- prometheus.Me
 	defer wg.Wait()
 
 	// 用来控制并发数量
-	concurrenceControl := make(chan bool, 3)
+	concurrenceControl := make(chan bool, 10)
 
-	for index, bucket := range bucketsList {
+	for _, bucketName := range bucketsList {
 		concurrenceControl <- true
 		wg.Add(1)
-		bucketUrl := "/api/rgw/bucket/" + bucket
+		bucketUrl := "/api/rgw/bucket/" + bucketName
 		bucketMethod := "GET"
 		go func(bucketUrl string) {
 			defer wg.Done()
+			var bucketData bucket
 			respBodyBucket, err := client.Request(bucketMethod, bucketUrl, nil)
 			if err != nil {
 				logrus.Errorf("获取 %v 桶数据失败，原因:%v", bucketUrl, err)
@@ -238,7 +238,7 @@ func (ScrapeBuckets) Scrape(client scraper.CommonClient, ch chan<- prometheus.Me
 			)
 			<-concurrenceControl
 		}(bucketUrl)
-		logrus.Debugf("桶计数：%v\n", index)
+		// logrus.Debugf("桶计数：%v\n", index)
 		// if index > 200 {
 		// 	break
 		// }
