@@ -74,7 +74,7 @@ func main() {
 	// pflag.StringVar(&collector.HarborVersion, "override-version", "", "override the harbor version")
 
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
-	opts := &collector.ConsolerOpts{}
+	opts := &collector.ConsoleAgentOpts{}
 	opts.AddFlag()
 
 	// scraperFlags 也是一个 map，并且 key 为 collector.Scraper 接口类型，这一小段代码主要有下面几个作用
@@ -115,49 +115,24 @@ func main() {
 	}
 
 	// 实例化 Exporter，其中包括所有自定义的 Metrics
-	consolerClient := collector.NewConsolerClient(opts)
-	exporter := scraper.NewExporter(consolerClient, enabledScrapers)
+	consoleAgentClient := collector.NewConsoleAgentClient(opts)
+	exporter := scraper.NewExporter(consoleAgentClient, enabledScrapers)
 	// 实例化一个注册器,并使用这个注册器注册 exporter
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(exporter)
 
 	// 设置路由信息
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			w.Write([]byte(`<html>
-			<head><title>` + collector.Name() + `</title></head>
-			<body>
-			<h1>` + collector.Name() + `</h1>
-			<form action="/" method="post">
-			wcRegionId:<input type="text" name="wcRegionID">
-			<input type="submit" value="commit">
-			</form>
-			</body>
-			</html>`))
-		default:
-			r.ParseForm()
-			// TODO 如何将表单数据当作header参数？
-			http.Redirect(w, r, *metricsPath, http.StatusFound)
-		}
+		w.Write([]byte(`<html>
+             <head><title>` + collector.Name() + `</title></head>
+             <body>
+             <h1>` + collector.Name() + `</h1>
+             <p><a href='` + *metricsPath + `'>Metrics</a></p>
+             </body>
+             </html>`))
 	})
 
-	// 由于 consolerClient.Opts.RegionID 已经实例化分配了内存空间，虽然一开始是通过 flag 传递的值，但是当使用了 HTTP 参数后，该值将会改变
-	// 后续就算不再使用 HTTP 参数，该值也无法还原成 flag 的值，所以这里需要一个变量，先存储一下 flag 传递的值。
-	regionID := consolerClient.Opts.RegionID
-	// http.Handle(*metricsPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorLog: logrus.StandardLogger()}))
-	http.HandleFunc(*metricsPath, func(w http.ResponseWriter, r *http.Request) {
-		// 从 URL 中获取ID信息，并传给后端。如果 HTTP 有参数，则使用参数传递进来的值，如果没有 HTTP 参数，则使用 flag 指定的值。
-		// TODO 是否需要加个锁？如果目标过多，同时写入这个数据，那么如何处理？如果需要加锁，又应该加在哪里？
-		if r.URL.Query().Get("wcRegionID") != "" {
-			consolerClient.Opts.RegionID = r.URL.Query().Get("wcRegionID")
-		} else {
-			consolerClient.Opts.RegionID = regionID
-		}
-		logrus.Debugf("Request Params's RegionID is: %s", consolerClient.Opts.RegionID)
-		h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorLog: logrus.StandardLogger()})
-		h.ServeHTTP(w, r)
-	})
+	http.Handle(*metricsPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorLog: logrus.StandardLogger()}))
 
 	http.HandleFunc("/-/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
