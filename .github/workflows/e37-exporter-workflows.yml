@@ -1,31 +1,32 @@
 name: Container Images Sync
 on:
-  # 取消 push 的注释后，向本仓库推送代码即可开始 Gitee 同步
   push:
+    branches:
+    - e37-exporter
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repository code
       uses: actions/checkout@v2
-    - name: Login to GitHub Package Registry
+    - name: 登录镜像仓库网站
       uses: docker/login-action@v1
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v1
-      with:
-        images: ghcr.io/desistdaydream/e37-exporter
-    - name: Build and push Docker image
+    # - name: 为 Docker 提前元数据(tags，labels)
+    #   id: meta
+    #   uses: docker/metadata-action@v1
+    #   with:
+    #     images: ghcr.io/desistdaydream/e37-exporter
+    - name: 构建并推送容器镜像
       uses: docker/build-push-action@v2
       with:
         context: .
         file: simulate_mysql_exporter/e37_exporter/Dockerfile
         push: true
-        tags: ghcr.io/desistdaydream/e37-exporter:v0.2.0
+        tags: ghcr.io/desistdaydream/e37-exporter
     
     # - name: docker build
     #   env:
