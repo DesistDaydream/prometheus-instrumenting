@@ -19,14 +19,14 @@ jobs:
     #   id: meta
     #   uses: docker/metadata-action@v1
     #   with:
-    #     images: ghcr.io/desistdaydream/console-agentexporter
+    #     images: ghcr.io/desistdaydream/console-agent-exporter
     - name: 构建并推送容器镜像
       uses: docker/build-push-action@v2
       with:
         context: .
         file: simulate_mysql_exporter/console_agent_exporter/Dockerfile
         push: true
-        tags: ghcr.io/desistdaydream/console-agentexporter
+        tags: ghcr.io/desistdaydream/console-agent-exporter
     
     # - name: docker build
     #   env:
@@ -34,5 +34,5 @@ jobs:
     #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
     #   run: |
     #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
-    #     sudo docker build -f simulate_mysql_exporter/console_agentexporter/Dockerfile -t ghcr.io/desistdaydream/console-agentexporter .
-    #     sudo docker push ghcr.io/desistdaydream/console-agentexporter
+    #     sudo docker build -f simulate_mysql_exporter/console_agent_exporter/Dockerfile -t ghcr.io/desistdaydream/console-agent-exporter .
+    #     sudo docker push ghcr.io/desistdaydream/console-agent-exporter
