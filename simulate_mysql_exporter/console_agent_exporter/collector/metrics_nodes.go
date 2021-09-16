@@ -2,6 +2,7 @@ package collector
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,36 +27,66 @@ var (
 	NodeTotalCacheSize = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_node_total_cache_size"),
 		"节点总缓存容量,单位:Byte",
-		[]string{"ip"}, nil,
+		[]string{"dam_name", "ip"}, nil,
 	)
 	// 节点已用缓存容量
 	NodeUsedCacheSize = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_node_used_cache_size"),
 		"节点已用缓存容量,单位:Byte",
-		[]string{"ip"}, nil,
+		[]string{"dam_name", "ip"}, nil,
 	)
 	// 节点未用缓存容量
 	NodeUnusedCacheSize = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "gdas_node_unused_cache_size"),
 		"节点未用缓存容量,单位:Byte",
-		[]string{"ip"}, nil,
+		[]string{"dam_name", "ip"}, nil,
 	)
-	// 机械手状态
+	// 盘库中盘库中已用盘匣数量
+	magazineUsedCount = prometheus.NewDesc(
+		prometheus.BuildFQName(Namespace, "", "gdas_das_magazine_used_count"),
+		"盘库中已用盘匣数量",
+		[]string{"dam_name", "ip", "da_name", "da_no"}, nil,
+	)
+
+	// 盘库中未用盘匣数量
+	magazineFreeCount = prometheus.NewDesc(
+		prometheus.BuildFQName(Namespace, "", "gdas_das_magazine_free_count"),
+		"盘库中未用盘匣数量",
+		[]string{"dam_name", "ip", "da_name", "da_no"}, nil,
+	)
+	// 盘库中异常盘匣数量
+	magazineExcpCount = prometheus.NewDesc(
+		prometheus.BuildFQName(Namespace, "", "gdas_das_magazine_excp_count"),
+		"盘库中异常盘匣数量",
+		[]string{"dam_name", "ip", "da_name", "da_no"}, nil,
+	)
+	// 盘库中机械手状态
 	changerStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(Namespace, "", "gdas_node_changer_status"),
+		prometheus.BuildFQName(Namespace, "", "gdas_das_changer_status"),
 		"盘库中机械手的状态:0-寿命良好,1-寿命警告,2-寿命已到",
-		[]string{"ip", "name", "changer_serial"}, nil,
+		[]string{"dam_name", "ip", "da_name", "da_no", "changer_serial"}, nil,
 	)
-	// 机械手数量
+	// 盘库中机械手状态
+	changerUsedPercent = prometheus.NewDesc(
+		prometheus.BuildFQName(Namespace, "", "gdas_das_changer_used_percent"),
+		"盘库中机械手使用百分比，该值需要除以 100",
+		[]string{"dam_name", "ip", "da_name", "da_no", "changer_serial"}, nil,
+	)
+	// TODO:盘库中机械手数量
 
 	// 光驱状态
 	driveStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(Namespace, "", "gdas_node_drive_status"),
+		prometheus.BuildFQName(Namespace, "", "gdas_das_drive_status"),
 		"盘库中光驱的状态:0-寿命良好,1-寿命警告,2-寿命已到",
-		[]string{"ip", "name", "drive_serial"}, nil,
+		[]string{"dam_name", "ip", "da_name", "da_no", "drive_serial"}, nil,
 	)
-	// 光驱数量
-
+	// 光驱状态
+	driveUsedPercent = prometheus.NewDesc(
+		prometheus.BuildFQName(Namespace, "", "gdas_das_drive_used_percent"),
+		"盘库中光驱使用百分比，该值需要除以 100",
+		[]string{"dam_name", "ip", "da_name", "da_no", "drive_serial"}, nil,
+	)
+	// TODO:盘库中光驱数量
 )
 
 // ScrapeNodes is
@@ -74,12 +105,13 @@ func (ScrapeNodes) Help() string {
 // Scrape is
 func (ScrapeNodes) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metric) (err error) {
 	// #############################################
-	// ######## 获取分布式节点信息,即node概况 ########
+	// ####### 获取分布式节点信息,即node概况 #######
 	// #############################################
-	// 获取分布式节点信息的指标
 	var (
-		nodedata   nodeData
-		nodeIPList []string
+		nodedata    nodeData
+		cacheData   cacheData
+		nodeDasData nodeDasData
+		nodeIPList  []string
 	)
 	url := "/api/gdas/node/list"
 	method := "POST"
@@ -101,24 +133,22 @@ func (ScrapeNodes) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 	// 集群中节点总数
 	ch <- prometheus.MustNewConstMetric(NodeTotalCount, prometheus.GaugeValue, float64(len(nodedata.NodeList)))
 
-	// 每个节点的状态
+	// ################################################
+	// # 通过分布式节点信息的内容，逐一获取每个节点的指标 #
+	// ################################################
 	for index, nodeIP := range nodeIPList {
+		// 获取节点的状态
 		ch <- prometheus.MustNewConstMetric(NodeStatus, prometheus.GaugeValue, float64(nodedata.NodeList[index].Status),
 			nodedata.NodeList[index].DamName,
 			nodeIP,
 		)
-	}
 
-	// ################################################
-	// # 通过分布式节点信息的内容，逐一获取每个节点的指标 #
-	// ################################################
-	//
-	// 循环每个节点，逐一获取节点的缓存数据
-	var cacheData cacheData
-	for _, nodeIP := range nodeIPList {
-		url := "/api/gdas/cache/node/" + nodeIP
-		method := "POST"
-		respBodyCacheNode, err := client.Request(method, url, nil)
+		// ################################################
+		// ####### 循环每个节点，逐一获取节点的缓存数据 ######
+		// ################################################
+		cacheUrl := "/api/gdas/cache/node/" + nodeIP
+		cacheMethod := "POST"
+		respBodyCacheNode, err := client.Request(cacheMethod, cacheUrl, nil)
 		if err != nil {
 			return err
 		}
@@ -129,24 +159,26 @@ func (ScrapeNodes) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 
 		//节点总缓存容量
 		ch <- prometheus.MustNewConstMetric(NodeTotalCacheSize, prometheus.GaugeValue, float64(cacheData.TotalCacheSize),
+			nodedata.NodeList[index].DamName,
 			nodeIP,
 		)
 		//节点已用缓存容量
 		ch <- prometheus.MustNewConstMetric(NodeUsedCacheSize, prometheus.GaugeValue, float64(cacheData.UsedCacheSize),
+			nodedata.NodeList[index].DamName,
 			nodeIP,
 		)
 		//节点未用缓存容量
 		ch <- prometheus.MustNewConstMetric(NodeUnusedCacheSize, prometheus.GaugeValue, float64(cacheData.UnUsedCacheSize),
+			nodedata.NodeList[index].DamName,
 			nodeIP,
 		)
-	}
 
-	// 循环每个节点，逐一获取节点下每个盘库的信息
-	var nodeDasData nodeDasData
-	for _, nodeIP := range nodeIPList {
-		url := "/api/gdas/das/node/" + nodeIP
-		method := "POST"
-		respBodyDasNode, err := client.Request(method, url, nil)
+		// ################################################
+		// #### 循环每个节点，逐一获取节点下每个盘库的信息 ####
+		// ################################################
+		dasUrl := "/api/gdas/das/node/" + nodeIP
+		dasMethod := "POST"
+		respBodyDasNode, err := client.Request(dasMethod, dasUrl, nil)
 		if err != nil {
 			return err
 		}
@@ -155,32 +187,84 @@ func (ScrapeNodes) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 			return err
 		}
 
-		// 循环每个盘库
+		// 每个节点下有多个盘库，所以循环每个盘库以获取指标
 		for j := 0; j < len(nodeDasData.DaList); j++ {
+			// 盘库中已用盘匣数量
+			ch <- prometheus.MustNewConstMetric(magazineUsedCount, prometheus.GaugeValue, float64(nodeDasData.DaList[j].MagazineUsedCount),
+				nodedata.NodeList[index].DamName,
+				nodeIP,
+				nodeDasData.DaList[j].Name,
+				strconv.Itoa(nodeDasData.DaList[j].DaNo),
+			)
+			// 盘库中未用盘匣数量
+			ch <- prometheus.MustNewConstMetric(magazineFreeCount, prometheus.GaugeValue, float64(nodeDasData.DaList[j].MagazineFreeCount),
+				nodedata.NodeList[index].DamName,
+				nodeIP,
+				nodeDasData.DaList[j].Name,
+				strconv.Itoa(nodeDasData.DaList[j].DaNo),
+			)
+			// 盘库中异常盘匣数量
+			ch <- prometheus.MustNewConstMetric(magazineExcpCount, prometheus.GaugeValue, float64(nodeDasData.DaList[j].MagazineExcpCount),
+				nodedata.NodeList[index].DamName,
+				nodeIP,
+				nodeDasData.DaList[j].Name,
+				strconv.Itoa(nodeDasData.DaList[j].DaNo),
+			)
+
+			// 循环盘库下每个机械手，以获取指标
 			for k := 0; k < len(nodeDasData.DaList[j].ChangerSmartInfo); k++ {
-				//机械手状态
+				// 机械手状态
 				ch <- prometheus.MustNewConstMetric(changerStatus, prometheus.GaugeValue, float64(nodeDasData.DaList[j].ChangerSmartInfo[k].Status),
+					nodedata.NodeList[index].DamName,
 					nodeIP,
 					nodeDasData.DaList[j].Name,
+					strconv.Itoa(nodeDasData.DaList[j].DaNo),
+					nodeDasData.DaList[j].ChangerSerial,
+					// strconv.Itoa(status.DaList[j].ChangerSmartInfo[k].UnitNo),
+				)
+				// 机械手使用百分比
+				ch <- prometheus.MustNewConstMetric(changerUsedPercent, prometheus.GaugeValue, float64(nodeDasData.DaList[j].ChangerSmartInfo[k].UsedPercent),
+					nodedata.NodeList[index].DamName,
+					nodeIP,
+					nodeDasData.DaList[j].Name,
+					strconv.Itoa(nodeDasData.DaList[j].DaNo),
 					nodeDasData.DaList[j].ChangerSerial,
 					// strconv.Itoa(status.DaList[j].ChangerSmartInfo[k].UnitNo),
 				)
 			}
-
-			for l := 0; l < len(nodeDasData.DaList[j].DriveSmartInfo); l++ {
-				//光驱状态
-				ch <- prometheus.MustNewConstMetric(driveStatus, prometheus.GaugeValue, float64(nodeDasData.DaList[j].DriveSmartInfo[l].Status),
-					nodeIP,
-					nodeDasData.DaList[j].Name,
-					nodeDasData.DaList[j].DriveSerialList[l].DriveSerial,
-					// strconv.Itoa(status.DaList[j].DriveSmartInfo[l].UnitNo),
-				)
+			// 循环盘库下每个光驱，以获取指标
+			// 判断一下与光驱有关的另一个数组中的元素是否不为空
+			if len(nodeDasData.DaList[j].DriveSerialList) > 0 {
+				for l := 0; l < len(nodeDasData.DaList[j].DriveSmartInfo); l++ {
+					// 光驱状态
+					ch <- prometheus.MustNewConstMetric(driveStatus, prometheus.GaugeValue, float64(nodeDasData.DaList[j].DriveSmartInfo[l].Status),
+						nodedata.NodeList[index].DamName,
+						nodeIP,
+						nodeDasData.DaList[j].Name,
+						strconv.Itoa(nodeDasData.DaList[j].DaNo),
+						nodeDasData.DaList[j].DriveSerialList[l].DriveSerial,
+						// strconv.Itoa(status.DaList[j].DriveSmartInfo[l].UnitNo),
+					)
+					// 光驱使用百分比
+					ch <- prometheus.MustNewConstMetric(driveUsedPercent, prometheus.GaugeValue, float64(nodeDasData.DaList[j].DriveSmartInfo[l].UsedPercent),
+						nodedata.NodeList[index].DamName,
+						nodeIP,
+						nodeDasData.DaList[j].Name,
+						strconv.Itoa(nodeDasData.DaList[j].DaNo),
+						nodeDasData.DaList[j].DriveSerialList[l].DriveSerial,
+						// strconv.Itoa(status.DaList[j].DriveSmartInfo[l].UnitNo),
+					)
+				}
+			} else {
+				logrus.Error("从 API 获取光驱指标异常,DriveSerialList 数组元素不大于0")
 			}
 		}
 	}
+
 	return nil
 }
 
+// /api/gdas/node/list 返回的数据
 // 全部节点的信息
 type nodeData struct {
 	Result   string     `json:"result"`
@@ -197,18 +281,19 @@ type nodeList struct {
 	IP string `json:"ip"`
 }
 
+// /api/gdas/cache/node/{nodeIP} 返回的数据
 // 每个节点的缓存信息
 type cacheData struct {
 	// UsedCacheSize 当前节点的已用缓存大小
-	UsedCacheSize int64 `json:"usedCacheSize"`
-	// Result 略
-	Result string `json:"result"`
+	UsedCacheSize int64  `json:"usedCacheSize"`
+	Result        string `json:"result"`
 	// UnUsedCacheSize 当前节点的剩余缓存大小
 	UnUsedCacheSize int64 `json:"unUsedCacheSize"`
 	// TotalCacheSize 当前节点的总缓存大小
 	TotalCacheSize int64 `json:"totalCacheSize"`
 }
 
+// /api/gdas/das/node/{nodeIP} 返回的数据
 // 每个节点下的全部盘库信息
 type nodeDasData struct {
 	Result string `json:"result"`
@@ -230,7 +315,7 @@ type daList struct {
 	DaStatus int `json:"daStatus"`
 	// ChangerNum 盘库机械手数量
 	ChangerNum int `json:"changer_num"`
-	// DaNo ！！没用！！值永远为0
+	// DaNo ？？？？应该节点下是盘库的序号，从0开始？？？？
 	DaNo int `json:"da_no"`
 	// ChangerSerial 机械手序列号
 	ChangerSerial string `json:"changerSerial"`

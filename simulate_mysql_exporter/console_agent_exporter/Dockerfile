@@ -1,12 +1,22 @@
-FROM golang:1.15 as builder
+FROM golang:1.16-alpine as builder
 WORKDIR /root/exporter
-COPY ./ ./
+
 ENV CGO_ENABLED=0 \
     GO111MODULE=on \
-    GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,https://goproxy.io,direct
-RUN go build ./simulate_mysql_exporter/console_agent_exporter/*.go
+    GOPROXY=https://goproxy.cn,https://goproxy.io,https://mirrors.aliyun.com/goproxy/,direct
+COPY go.mod go.mod
+COPY go.sum go.sum
+RUN go mod download
+
+COPY ./ /root/exporter
+RUN go build -o console-agent-exporter ./simulate_mysql_exporter/console_agent_exporter/*.go
 
 FROM alpine
 WORKDIR /root/exporter
-COPY --from=builder /root/exporter/main /usr/local/bin/consoler-exporter
-ENTRYPOINT  [ "/usr/local/bin/consoler-exporter" ]
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
+    apk update && \
+    apk add --no-cache tzdata && \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+ENV TZ=Asia/Shanghai
+COPY --from=builder /root/exporter/console-agent-exporter /usr/local/bin/console-agent-exporter
+ENTRYPOINT  [ "/usr/local/bin/console-agent-exporter" ]
