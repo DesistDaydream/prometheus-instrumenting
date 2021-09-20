@@ -61,12 +61,13 @@ func GetToken(opts *E37Opts) (token string, err error) {
 	if err != nil {
 		return
 	}
-	logrus.Debugf("Get Token Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(respBody))
 	token, err = jsonRespBody.Get("token").String()
 	if err != nil {
 		return "", fmt.Errorf("GetToken Error：%v", err)
 	}
-	logrus.Debugf("Get Token Successed!Token is:%v ", token)
+	logrus.WithFields(logrus.Fields{
+		"Token": token,
+	}).Debugf("Get Token Successed!")
 	return
 }
 
@@ -113,7 +114,7 @@ func NewE37Client(opts *E37Opts) *E37Client {
 	}
 	// ######## 配置 http.Client 的信息结束 ########
 
-	//
+	// 第一次启动程序时获取 Token，若无法获取 Token 则程序无法启动
 	token, err := GetToken(opts)
 	if err != nil {
 		panic(err)
@@ -132,7 +133,10 @@ func NewE37Client(opts *E37Opts) *E37Client {
 func (g *E37Client) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 E37 的连接，并返回 Body 给每个 Metric 采集器
 	url := g.Opts.URL + endpoint
-	logrus.Debugf("request url is: %s", url)
+	logrus.WithFields(logrus.Fields{
+		"url":    url,
+		"method": method,
+	}).Debugf("抓取指标时的请求URL")
 
 	// 创建一个新的 Request
 	req, err := http.NewRequest(method, url, reqBody)
@@ -158,7 +162,10 @@ func (g *E37Client) Request(method string, endpoint string, reqBody io.Reader) (
 	if err != nil {
 		return nil, err
 	}
-	// logrus.Debugf("Response Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(body))
+	logrus.WithFields(logrus.Fields{
+		"code": resp.StatusCode,
+		"body": string(body),
+	}).Tracef("每次请求的响应体以及响应状态码")
 	return body, nil
 }
 
@@ -170,11 +177,13 @@ type token struct {
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (g *E37Client) Ping() (b bool, err error) {
-	logrus.Debugf("每次从 E37 并发抓取指标之前，先检查一下目标状态")
-
 	// 判断 TOKEN 是否可用
 	url := g.Opts.URL + "/api/auth/check"
-	logrus.Debugf("Ping Request url %s", url)
+	method := "POST"
+	logrus.WithFields(logrus.Fields{
+		"url":    url,
+		"method": method,
+	}).Debugf("每次从 E37 并发抓取指标之前，先检查一下目标状态")
 
 	t := token{
 		Token: g.Token,
@@ -186,7 +195,7 @@ func (g *E37Client) Ping() (b bool, err error) {
 	// jsonReqBody := []byte("{\"token\":\"" + g.Token + "\"}")
 
 	// 创建一个新的 Request
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonReqBody))
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonReqBody))
 	if err != nil {
 		return false, err
 	}
@@ -210,7 +219,9 @@ func (g *E37Client) Ping() (b bool, err error) {
 	// 若响应体没有 username 字段，则重新获取 Token
 	_, err = jsonRespBody.Get("username").String()
 	if err != nil {
-		logrus.Errorf("Token 检查失败，状态码为：%v,尝试重新获取 Token\n", resp.Status)
+		logrus.WithFields(logrus.Fields{
+			"code": resp.Status,
+		}).Errorf("Token 检查失败,尝试重新获取 Token")
 		g.Token, err = GetToken(g.Opts)
 		if err != nil {
 			return false, fmt.Errorf("重新获取 Token 失败，响应吗：%v，响应体：%v", resp.Status, resp.Body)

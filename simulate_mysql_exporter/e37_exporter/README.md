@@ -19,7 +19,7 @@ lchdzh/e37-exporter:v0.2.0 \
 
 ## 测试
 ```shell
-go run e37_exporter/main.go --web.listen-address=':18443' --log-level=debug --e37-server='http://ss-admin.datalake.gdmm.ehualu.it:38443'
+go run simulate_mysql_exporter/e37_exporter/main.go --web.listen-address=':18443' --log-level=debug --e37-server='http://ss-admin.datalake.gdmm.ehualu.it:38443'
 ```
 
 ```shell
