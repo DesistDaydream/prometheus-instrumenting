@@ -5,14 +5,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
@@ -45,13 +43,13 @@ func GetToken(opts *HWObsOpts) (token string, err error) {
 	// 发送 Request 并获取 Response
 	resp, err := (&http.Client{Transport: ts}).Do(req)
 	if err != nil {
-		respBody, _ := ioutil.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("GetToken Error: %v\nResonse:%v", resp.StatusCode, string(respBody))
 	}
 	defer resp.Body.Close()
 
 	// 处理 Response Body,并获取 Token
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
@@ -63,7 +61,7 @@ func GetToken(opts *HWObsOpts) (token string, err error) {
 	if token, err = jsonRespBody.Get("data").Get("x_auth_token").String(); err != nil {
 		return "", fmt.Errorf("GetToken Error：%v", err)
 	}
-	logrus.Debugf("Get Token Successed!Token is:%v ", token)
+	logrus.Info("Get Token Successed!Token is:", token)
 	return
 }
 
@@ -98,6 +96,7 @@ func NewHWObsClient(opts *HWObsOpts) *HWObsClient {
 	tlsClientConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		RootCAs:    nil,
+		// RootCAs:    rootCAs,
 	}
 	// 可以通过命令行选项配置 TLS 的 InsecureSkipVerify
 	// 这个配置决定是否跳过 https 协议的验证过程，就是 curl 加不加 -k 选项。默认跳过
@@ -109,7 +108,7 @@ func NewHWObsClient(opts *HWObsOpts) *HWObsClient {
 	}
 	// ######## 配置 http.Client 的信息结束 ########
 
-	//
+	// 启动时获取一次 Token，若获取 Token 失败直接 panic
 	token, err := GetToken(opts)
 	if err != nil {
 		panic(err)
@@ -151,7 +150,7 @@ func (x *HWObsClient) Request(method string, endpoint string, reqBody io.Reader)
 	}
 
 	// 处理 Response Body
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -174,29 +173,44 @@ func (x *HWObsClient) Ping() (b bool, err error) {
 	}
 	logrus.Debugf("HWObs Token 为: %s", x.Token)
 
-	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
-	logrus.Debugf("Ping Request url %s", x.Opts.URL+"/health")
-	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
+	// 使用 Token 发起健康检查请求，并获取响应体，以进行下一步判断处理
+	logrus.Debugf("Ping Request url %s", x.Opts.URL+"/dsware/service/managerstatus")
+	req, err := http.NewRequest("GET", x.Opts.URL+"/dsware/service/managerstatus", nil)
 	if err != nil {
 		return false, err
 	}
-	req.SetBasicAuth(x.Opts.Username, x.Opts.password)
+
+	req.Header.Set("X-Auth-Token", x.Token)
 
 	resp, err := x.Client.Do(req)
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 
-	resp.Body.Close()
-
-	switch {
-	case resp.StatusCode == http.StatusOK:
-		return true, nil
-	case resp.StatusCode == http.StatusUnauthorized:
-		return false, errors.New("username or password incorrect")
-	default:
-		return false, fmt.Errorf("error handling request, http-statuscode: %s", resp.Status)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
 	}
+
+	jsonRespBody, err := simplejson.NewJson(respBody)
+	if err != nil {
+		return false, err
+	}
+
+	// 判断本次健康检查结果，若检测结果失败，则重新获取 Token
+	if result, err := jsonRespBody.Get("result").Int(); err != nil || result != 0 {
+		logrus.Error("Ping 检查失败，原因:", jsonRespBody.Get("description").MustString())
+		logrus.Error("尝试重新获取 Token......")
+		x.Token, err = GetToken(x.Opts)
+		if err == nil {
+			return true, nil
+		}
+		logrus.Error("重新获取 Token 失败")
+		return false, err
+	}
+
+	return true, nil
 }
 
 // HWObsOpts 登录 HWObs 所需属性
@@ -211,9 +225,9 @@ type HWObsOpts struct {
 
 // AddFlag use after set Opts
 func (o *HWObsOpts) AddFlag() {
-	pflag.StringVar(&o.URL, "hw_obs-server", "https://172.20.6.100:8088", "HTTP API address of a HWObs server or agent. (prefix with https:// to connect over HTTPS)")
-	pflag.StringVar(&o.Username, "hw_obs-user", "admin", "hw_obs username")
-	pflag.StringVar(&o.password, "hw_obs-pass", "Huawei12#$", "hw_obs password")
-	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the HWObs API.")
+	pflag.StringVar(&o.URL, "hw-obs-server", "https://172.20.6.100:8088", "HTTP API address of a HWObs server or agent. (prefix with https:// to connect over HTTPS)")
+	pflag.StringVar(&o.Username, "hw-obs-user", "admin", "hw_obs username")
+	pflag.StringVar(&o.password, "hw-obs-pass", "Huawei12#$", "hw_obs password")
+	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*6000, "Timeout on HTTP requests to the HWObs API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

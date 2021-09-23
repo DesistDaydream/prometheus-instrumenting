@@ -16,9 +16,10 @@ import (
 )
 
 var scrapers = map[scraper.CommonScraper]bool{
-	collector.ScrapeCluster{}: true,
-	// ScrapeGc{}:          false,
-	// ScrapeRegistries{}:  false,
+	collector.ScrapeCluster{}:         true,
+	collector.ScrapeDisk{}:            true,
+	collector.ScrapeStoragePool{}:     true,
+	collector.ScrapePerformanceData{}: true,
 }
 
 func LogInit(level, file string) error {
@@ -46,7 +47,7 @@ func LogInit(level, file string) error {
 func main() {
 	scraper.Namespace = collector.Namespace
 
-	listenAddress := pflag.String("web.listen-address", ":8080", "Address to listen on for web interface and telemetry.")
+	listenAddress := pflag.String("web.listen-address", ":9122", "Address to listen on for web interface and telemetry.")
 	metricsPath := pflag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
 	logFile := pflag.String("log-output", "", "the file which log to, default stdout")
