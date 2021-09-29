@@ -12,13 +12,13 @@ var (
 
 	clusterServerCount = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "cluster_server_count"),
-		"HWObs 集群中节点总数",
+		"集群中节点总数",
 		[]string{}, nil,
 	)
 
 	clusterServerStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "cluster_server_status"),
-		"HWObs 集群中节点状态",
+		"集群中节点状态",
 		[]string{"name", "serial_number", "management_ip"}, nil,
 	)
 )
@@ -28,19 +28,19 @@ type ScrapeCluster struct{}
 
 // Name 指定自己定义的 抓取器 的名字，与 Metric 的名字不是一个概念，但是一般保持一致
 func (ScrapeCluster) Name() string {
-	return "cluster_server"
+	return "cluster_server_info"
 }
 
 // Help 指定自己定义的 抓取器 的帮助信息，这里的 Help 的内容将会作为命令行标志的帮助信息。与 Metric 的 Help 不是一个概念。
 func (ScrapeCluster) Help() string {
-	return "HWObs Cluster Server"
+	return "HWObs Cluster Server info"
 }
 
 // Scrape 从客户端采集数据，并将其作为 Metric 通过 channel(通道) 发送。主要就是采集 HWObs 集群信息的具体行为。
 func (ScrapeCluster) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metric) (err error) {
 	var (
 		respBody          []byte
-		clusterServerData ClusterServerData
+		clusterServerData clusterServerData
 	)
 
 	url := "/api/v2/cluster/servers"
@@ -66,11 +66,11 @@ func (ScrapeCluster) Scrape(client scraper.CommonClient, ch chan<- prometheus.Me
 }
 
 // ClusterServerData 存储 HWObs Cluster 相关信息的 Response Body 的数据
-type ClusterServerData struct {
-	Data   []Data `json:"data"`
-	Result Result `json:"result"`
+type clusterServerData struct {
+	Data   []data `json:"data"`
+	Result result `json:"result"`
 }
-type Data struct {
+type data struct {
 	ID int `json:"id"`
 	// 节点名称，即主机名
 	Name string `json:"name"`
@@ -95,7 +95,7 @@ type Data struct {
 	Description  string   `json:"description"`
 	Suggestion   string   `json:"suggestion"`
 }
-type Result struct {
+type result struct {
 	Code        int    `json:"code"`
 	Description string `json:"description"`
 	Suggestion  string `json:"suggestion"`
