@@ -2,10 +2,10 @@ package collector
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -66,7 +66,7 @@ func (ScrapeMagazines) Scrape(client scraper.CommonClient, ch chan<- prometheus.
 		}
 	}
 
-	fmt.Printf("当前分配了 %v 个盘匣\n", undistributedCount)
+	logrus.Debugf("当前分配了 %v 个盘匣", undistributedCount)
 	ch <- prometheus.MustNewConstMetric(magazines, prometheus.GaugeValue, undistributedCount, "undistributedCount")
 	return nil
 }

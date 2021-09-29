@@ -22,7 +22,6 @@ import (
 var scrapers = map[scraper.CommonScraper]bool{
 	collector.ScrapeMagazines{}: true,
 	collector.ScrapeNodeList{}:  true,
-	collector.ScrapeNodeList2{}: true,
 }
 
 // DumpStacks is
@@ -34,15 +33,24 @@ func DumpStacks() {
 
 // LogInit 日志功能初始化，若指定了 log-output 命令行标志，则将日志写入到文件中
 func LogInit(level, file string) error {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
+	// logrus.SetFormatter(&logrus.TextFormatter{
+	// 	FullTimestamp:   true,
+	// 	TimestampFormat: "2006-01-02 15:04:05",
+	// })
+	logrus.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat:   "2006-01-02 15:04:05",
+		DisableTimestamp:  false,
+		DisableHTMLEscape: false,
+		DataKey:           "",
+		// FieldMap:          map[logrus.fieldKey]string{},
+		// CallerPrettyfier: func(*runtime.Frame) (string, string) {},
+		PrettyPrint: false,
 	})
-	le, err := logrus.ParseLevel(level)
+	logLevel, err := logrus.ParseLevel(level)
 	if err != nil {
 		return err
 	}
-	logrus.SetLevel(le)
+	logrus.SetLevel(logLevel)
 
 	if file != "" {
 		f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE, 0755)
