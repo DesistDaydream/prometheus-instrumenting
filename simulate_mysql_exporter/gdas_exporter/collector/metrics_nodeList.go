@@ -2,10 +2,10 @@ package collector
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -55,7 +55,7 @@ func (ScrapeNodeList) Scrape(client scraper.CommonClient, ch chan<- prometheus.M
 		return err
 	}
 
-	fmt.Printf("当前共有 %v 个节点\n", len(data.NodeList))
+	logrus.Debugf("当前共有 %v 个节点", len(data.NodeList))
 
 	for i := 0; i < len(data.NodeList); i++ {
 		ch <- prometheus.MustNewConstMetric(nodelist, prometheus.GaugeValue, data.NodeList[i].Status, data.NodeList[i].IP, data.NodeList[i].DamName)

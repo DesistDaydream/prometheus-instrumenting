@@ -66,12 +66,13 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	if err != nil {
 		return
 	}
-	logrus.Debugf("Get Token Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(respBody))
 	token, err = jsonRespBody.Get("token").String()
 	if err != nil {
 		return "", fmt.Errorf("GetToken Error：%v", err)
 	}
-	logrus.Debugf("Get Token Successed!Token is:%v ", token)
+	logrus.WithFields(logrus.Fields{
+		"Token": token,
+	}).Debugf("Get Token Successed!")
 	return
 }
 
@@ -137,23 +138,12 @@ func NewGdasClient(opts *GdasOpts) *GdasClient {
 func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 Gdas 的连接，并返回 Body 给每个 Metric 采集器
 	url := g.Opts.URL + endpoint
-	logrus.Debugf("request url %s", url)
+	logrus.WithFields(logrus.Fields{
+		"url":    url,
+		"method": method,
+	}).Debugf("抓取指标时的请求URL")
 
-	// 生成签名所需数据
-	// 毫秒时间戳
-	stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
-	// 随机数
-	randString := rand.Intn(100000)
-	// 随机数倒序
-	stringRand := []rune(strconv.Itoa(randString))
-	for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
-		stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
-	}
-	// 签名
-	signature := stime + strconv.Itoa(randString) + g.Token + string(stringRand)
-	h := sha256.New()
-	h.Write([]byte(signature))                     // 需要加密的字符串为
-	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
+	randString, signatureSha := generateSign(g.Token)
 
 	// 创建一个新的 Request
 	req, err := http.NewRequest(method, url, reqBody)
@@ -164,7 +154,7 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("token", g.Token)
 	req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
-	req.Header.Set("nonce", strconv.Itoa(randString))
+	req.Header.Set("nonce", randString)
 	req.Header.Set("signature", signatureSha)
 	req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
 
@@ -184,54 +174,35 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 	if err != nil {
 		return nil, err
 	}
-	logrus.Debugf("Response Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(body))
+	logrus.WithFields(logrus.Fields{
+		"code": resp.StatusCode,
+		"body": string(body),
+	}).Tracef("每次请求的响应体以及响应状态码")
 	return body, nil
 }
 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
 func (g *GdasClient) Ping() (b bool, err error) {
-	logrus.Debugf("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
-	// // 判断是否有 TOKEN
-	if g.Token == "" {
-		logrus.Debugf("Token 为空，开始尝试获取 Token")
-		g.Token, err = GetToken(g.Opts)
-		if err == nil {
-			return true, nil
-		}
-		return false, err
-	}
-	logrus.Debugf("Xsky Token 为: %s", g.Token)
-
 	// 判断 TOKEN 是否可用
 	url := g.Opts.URL + "/v1/nodeList"
-	logrus.Debugf("Ping Request url %s", url)
+	method := "GET"
+	logrus.WithFields(logrus.Fields{
+		"url":    url,
+		"method": method,
+	}).Debugf("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
 
-	// 生成 Request Header 中
-	// 毫秒时间戳
-	stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
-	// 随机数
-	randString := rand.Intn(100000)
-	// 随机数倒序
-	stringRand := []rune(strconv.Itoa(randString))
-	for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
-		stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
-	}
-	// 签名
-	signature := stime + strconv.Itoa(randString) + g.Token + string(stringRand)
-	h := sha256.New()
-	h.Write([]byte(signature))                     // 需要加密的字符串为
-	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
+	randString, signatureSha := generateSign(g.Token)
 
 	// 创建一个新的 Request
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return false, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("token", g.Token)
 	req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
-	req.Header.Set("nonce", strconv.Itoa(randString))
+	req.Header.Set("nonce", randString)
 	req.Header.Set("signature", signatureSha)
 	req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
 
@@ -278,4 +249,25 @@ func (o *GdasOpts) AddFlag() {
 	pflag.StringVar(&o.password, "gdas-pass", "", "gdas password")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the Gads API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
+}
+
+// 生成签名所需数据
+func generateSign(token string) (string, string) {
+
+	// 毫秒时间戳
+	stime := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	// 随机数
+	randString := rand.Intn(100000)
+	// 随机数倒序
+	stringRand := []rune(strconv.Itoa(randString))
+	for from, to := 0, len(stringRand)-1; from < to; from, to = from+1, to-1 {
+		stringRand[from], stringRand[to] = stringRand[to], stringRand[from]
+	}
+	// 签名
+	signature := stime + strconv.Itoa(randString) + token + string(stringRand)
+	h := sha256.New()
+	h.Write([]byte(signature))                     // 需要加密的字符串为
+	signatureSha := hex.EncodeToString(h.Sum(nil)) // 输出加密结果
+
+	return strconv.Itoa(randString), signatureSha
 }
