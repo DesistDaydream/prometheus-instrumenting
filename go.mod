@@ -1,4 +1,4 @@
-module github.com/DesistDaydream/exporter
+module github.com/DesistDaydream/prometheus-instrumenting
 
 go 1.15
 

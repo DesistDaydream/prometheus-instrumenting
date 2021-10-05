@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
+	"github.com/DesistDaydream/prometheus-instrumenting/simulate_mysql_exporter/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

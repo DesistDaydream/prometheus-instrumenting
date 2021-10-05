@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/DesistDaydream/exporter/practice/harbor_exporter/collector"
+	"github.com/DesistDaydream/prometheus-instrumenting/practice/harbor_exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

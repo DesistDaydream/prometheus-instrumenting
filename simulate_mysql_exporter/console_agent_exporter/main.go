@@ -6,8 +6,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/console_agent_exporter/collector"
-	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
+	"github.com/DesistDaydream/prometheus-instrumenting/simulate_mysql_exporter/console_agent_exporter/collector"
+	"github.com/DesistDaydream/prometheus-instrumenting/simulate_mysql_exporter/pkg/scraper"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"

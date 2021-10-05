@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/pkg/scraper"
-	"github.com/DesistDaydream/exporter/simulate_mysql_exporter/xsky_exporter/collector"
+	"github.com/DesistDaydream/prometheus-instrumenting/simulate_mysql_exporter/pkg/scraper"
+	"github.com/DesistDaydream/prometheus-instrumenting/simulate_mysql_exporter/xsky_exporter/collector"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
