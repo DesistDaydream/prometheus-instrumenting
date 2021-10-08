@@ -1,6 +1,6 @@
 # 构建
 ```shell
-docker build -f huawei_obs_exporter/Dockerfile -t lchdzh/huawei-obs-exporter:v0.1 .
+docker build -f exporter/huawei_obs_exporter/Dockerfile -t lchdzh/huawei-obs-exporter:v0.1 .
 ```
 
 # 运行
