@@ -46,9 +46,8 @@ func GetToken(opts *E37Opts) (token string, err error) {
 
 	// 发送 Request 并获取 Response
 	resp, err := (&http.Client{Transport: ts}).Do(req)
-	if err != nil || resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("GetToken Error: %v\nReason:%v", resp.StatusCode, string(respBody))
+	if err != nil {
+		return
 	}
 	defer resp.Body.Close()
 
