@@ -52,7 +52,11 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	// 发送 Request 并获取 Response
 	resp, err := (&http.Client{Transport: ts}).Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		return "", err
+		logrus.WithFields(logrus.Fields{
+			"reson": "发起 HTTP 请求异常",
+			"code":  resp.StatusCode,
+		}).Errorf("GetToken Error")
+		return
 	}
 	defer resp.Body.Close()
 
@@ -67,7 +71,10 @@ func GetToken(opts *GdasOpts) (token string, err error) {
 	}
 	token, err = jsonRespBody.Get("token").String()
 	if err != nil {
-		return "", fmt.Errorf("GetToken Error：%v", err)
+		logrus.WithFields(logrus.Fields{
+			"reson": "获取响应体中的数据失败",
+		}).Errorf("GetToken Error")
+		return
 	}
 	logrus.WithFields(logrus.Fields{
 		"Token": token,
