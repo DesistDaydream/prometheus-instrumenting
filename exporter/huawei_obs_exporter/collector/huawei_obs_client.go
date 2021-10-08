@@ -43,8 +43,7 @@ func GetToken(opts *HWObsOpts) (token string, err error) {
 	// 发送 Request 并获取 Response
 	resp, err := (&http.Client{Transport: ts}).Do(req)
 	if err != nil {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("GetToken Error: %v\nResonse:%v", resp.StatusCode, string(respBody))
+		return
 	}
 	defer resp.Body.Close()
 
@@ -57,11 +56,17 @@ func GetToken(opts *HWObsOpts) (token string, err error) {
 	if err != nil {
 		return
 	}
-	logrus.Debugf("Get Token Status:\nResponseStatusCode：%v\nResponseBody：%v\n", resp.StatusCode, string(respBody))
-	if token, err = jsonRespBody.Get("data").Get("x_auth_token").String(); err != nil {
-		return "", fmt.Errorf("GetToken Error：%v", err)
+	token, err = jsonRespBody.Get("data").Get("x_auth_token").String()
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"reson": "获取响应体中的数据失败",
+			"body":  string(respBody),
+		}).Errorf("GetToken Error")
+		return
 	}
-	logrus.Info("Get Token Successed!Token is:", token)
+	logrus.WithFields(logrus.Fields{
+		"Token": token,
+	}).Debugf("Get Token Successed!")
 	return
 }
 
