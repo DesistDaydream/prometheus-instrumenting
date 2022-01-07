@@ -25,7 +25,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: exporter/console_agent_exporter/Dockerfile
+          file: cmd/console_agent_exporter/Dockerfile
           push: true
           tags: ghcr.io/desistdaydream/console-agent-exporter
 
@@ -35,5 +35,5 @@ jobs:
     #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
     #   run: |
     #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
-    #     sudo docker build -f exporter/console_agent_exporter/Dockerfile -t ghcr.io/desistdaydream/console-agent-exporter .
+    #     sudo docker build -f cmd/console_agent_exporter/Dockerfile -t ghcr.io/desistdaydream/console-agent-exporter .
     #     sudo docker push ghcr.io/desistdaydream/console-agent-exporter

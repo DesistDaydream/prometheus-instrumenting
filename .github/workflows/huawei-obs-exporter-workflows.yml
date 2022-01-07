@@ -25,7 +25,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: exporter/huawei_obs_exporter/Dockerfile
+          file: cmd/huawei_obs_exporter/Dockerfile
           push: true
           tags: ghcr.io/desistdaydream/huawei-obs-exporter
 
@@ -35,5 +35,5 @@ jobs:
     #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
     #   run: |
     #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
-    #     sudo docker build -f exporter/huawei-obs_exporter/Dockerfile -t ghcr.io/desistdaydream/huawei-obs-exporter:v0.2.0 .
+    #     sudo docker build -f cmd/huawei-obs_exporter/Dockerfile -t ghcr.io/desistdaydream/huawei-obs-exporter:v0.2.0 .
     #     sudo docker push ghcr.io/desistdaydream/huawei-obs-exporter:v0.2.0

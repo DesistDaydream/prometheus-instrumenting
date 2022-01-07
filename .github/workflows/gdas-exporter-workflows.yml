@@ -25,7 +25,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: exporter/gdas_exporter/Dockerfile
+          file: cmd/gdas_exporter/Dockerfile
           push: true
           tags: ghcr.io/desistdaydream/gdas-exporter
 
@@ -35,5 +35,5 @@ jobs:
     #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
     #   run: |
     #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
-    #     sudo docker build -f exporter/gdas_exporter/Dockerfile -t ghcr.io/desistdaydream/gdas-exporter:v0.2.0 .
+    #     sudo docker build -f cmd/gdas_exporter/Dockerfile -t ghcr.io/desistdaydream/gdas-exporter:v0.2.0 .
     #     sudo docker push ghcr.io/desistdaydream/gdas-exporter:v0.2.0
