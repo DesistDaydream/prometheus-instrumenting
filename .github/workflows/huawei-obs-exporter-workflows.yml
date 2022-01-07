@@ -1,4 +1,4 @@
-name: Container Images Sync
+name: huawei-obs-exporter
 on:
   push:
     branches:

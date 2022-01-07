@@ -1,4 +1,4 @@
-name: Container Images Sync
+name: console-agent-exporter
 on:
   push:
     branches:

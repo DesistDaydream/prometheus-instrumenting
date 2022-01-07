@@ -1,4 +1,4 @@
-name: Container Images Sync
+name: e37-exporter
 on:
   push:
     branches:

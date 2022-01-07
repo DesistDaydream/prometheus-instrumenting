@@ -1,4 +1,4 @@
-name: Container Images Sync
+name: gdas-exporter
 on:
   push:
     branches:
