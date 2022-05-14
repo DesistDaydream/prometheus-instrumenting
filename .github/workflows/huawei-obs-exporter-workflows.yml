@@ -28,12 +28,3 @@ jobs:
           file: cmd/huawei_obs_exporter/Dockerfile
           push: true
           tags: ghcr.io/desistdaydream/huawei-obs-exporter
-
-    # - name: docker build
-    #   env:
-    #     REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-    #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-    #   run: |
-    #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
-    #     sudo docker build -f cmd/huawei-obs_exporter/Dockerfile -t ghcr.io/desistdaydream/huawei-obs-exporter:v0.2.0 .
-    #     sudo docker push ghcr.io/desistdaydream/huawei-obs-exporter:v0.2.0

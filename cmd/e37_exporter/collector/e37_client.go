@@ -233,9 +233,10 @@ func (g *E37Client) Ping() (b bool, err error) {
 
 // E37Opts 登录 E37 所需属性
 type E37Opts struct {
-	URL      string
-	Username string
-	password string
+	URL        string
+	Username   string
+	password   string
+	Concurrent int
 	// 这俩是关于 http.Client 的选项
 	Timeout  time.Duration
 	Insecure bool
@@ -246,6 +247,7 @@ func (o *E37Opts) AddFlag() {
 	pflag.StringVar(&o.URL, "e37-server", "https://172.38.30.2:8443", "HTTP API address of a E37 server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "e37-user", "admin", "e37 username")
 	pflag.StringVar(&o.password, "e37-pass", "admin", "e37 password")
+	pflag.IntVar(&o.Concurrent, "concurrent", 10, "Number of concurrent requests during collection.")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the Gads API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

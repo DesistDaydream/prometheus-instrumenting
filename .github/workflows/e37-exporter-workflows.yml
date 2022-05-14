@@ -13,8 +13,9 @@ jobs:
       - name: 登录镜像仓库网站
         uses: docker/login-action@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
+          # registry: docker.io
+          # username: ${{ github.actor }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       # - name: 为 Docker 提前元数据(tags，labels)
       #   id: meta
@@ -27,13 +28,4 @@ jobs:
           context: .
           file: cmd/e37_exporter/Dockerfile
           push: true
-          tags: ghcr.io/desistdaydream/e37-exporter
-
-    # - name: docker build
-    #   env:
-    #     REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-    #     REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-    #   run: |
-    #     echo "${REGISTRY_PASSWORD}" | sudo docker login --username=${REGISTRY_USERNAME} --password-stdin ghcr.io
-    #     sudo docker build -f cmd/e37_exporter/Dockerfile -t ghcr.io/desistdaydream/e37-exporter:v0.2.0 .
-    #     sudo docker push ghcr.io/desistdaydream/e37-exporter:v0.2.0
+          tags: docker.io/lchdzh/e37-exporter:v1.0.0

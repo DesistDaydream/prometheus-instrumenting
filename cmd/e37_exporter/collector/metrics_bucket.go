@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"sync"
 
 	"github.com/DesistDaydream/prometheus-instrumenting/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
@@ -138,106 +137,106 @@ func (ScrapeBuckets) Scrape(client scraper.CommonClient, ch chan<- prometheus.Me
 	// 全部桶的总数
 	ch <- prometheus.MustNewConstMetric(bucketTotalCount, prometheus.GaugeValue, float64(len(bucketsList)))
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
+	// var wg sync.WaitGroup
+	// defer wg.Wait()
 
 	// 用来控制并发数量
-	concurrenceControl := make(chan bool, 10)
+	// concurrenceControl := make(chan bool, 10)
 
 	for _, bucketName := range bucketsList {
-		concurrenceControl <- true
-		wg.Add(1)
+		// concurrenceControl <- true
+		// wg.Add(1)
 		bucketUrl := "/api/rgw/bucket/" + bucketName
 		bucketMethod := "GET"
-		go func(bucketUrl string) {
-			defer wg.Done()
-			var bucketData bucket
-			respBodyBucket, err := client.Request(bucketMethod, bucketUrl, nil)
-			if err != nil {
-				logrus.Errorf("获取 %v 桶数据失败，原因:%v", bucketUrl, err)
-				<-concurrenceControl
-				return
-			}
-			err = json.Unmarshal(respBodyBucket, &bucketData)
-			if err != nil {
-				logrus.Errorf("解析 %v 桶数据失败，原因:%v", bucketUrl, err)
-				<-concurrenceControl
-				return
-			}
-			// 桶的总对象数
-			ch <- prometheus.MustNewConstMetric(numObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.NumObjects),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 通的总数据量
-			ch <- prometheus.MustNewConstMetric(size, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.Size),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的本地总对象数
-			ch <- prometheus.MustNewConstMetric(localAllocatedObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.LocalAllocatedObjects),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的本地总数据量
-			ch <- prometheus.MustNewConstMetric(localAllocatedSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.LocalAllocatedSize),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的转磁带对象数
-			ch <- prometheus.MustNewConstMetric(externalTapeObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalTapeObjects),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的转磁带数据量
-			ch <- prometheus.MustNewConstMetric(externalTapeSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalTapeSize),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的转光对象数
-			ch <- prometheus.MustNewConstMetric(externalGlacierObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalGlacierObjects),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的转光数据量
-			ch <- prometheus.MustNewConstMetric(externalGlacierSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalGlacierSize),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的取回光对象数
-			ch <- prometheus.MustNewConstMetric(restoreGlacierObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreGlacierObjects),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的取回光数据量
-			ch <- prometheus.MustNewConstMetric(restoreGlacierSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreGlacierSize),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的取回磁带对象数
-			ch <- prometheus.MustNewConstMetric(restoreTapeObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreTapeObjects),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			// 桶的取回磁带数据量
-			ch <- prometheus.MustNewConstMetric(restoreTapeSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreTapeSize),
-				bucketData.Bid,
-				bucketData.Bucket,
-				bucketData.Owner,
-			)
-			<-concurrenceControl
-		}(bucketUrl)
+		// go func(bucketUrl string) {
+		// defer wg.Done()
+		var bucketData bucket
+		respBodyBucket, err := client.Request(bucketMethod, bucketUrl, nil)
+		if err != nil {
+			logrus.Errorf("获取 %v 桶数据失败，原因:%v", bucketUrl, err)
+			// <-concurrenceControl
+			// return
+		}
+		err = json.Unmarshal(respBodyBucket, &bucketData)
+		if err != nil {
+			logrus.Errorf("解析 %v 桶数据失败，原因:%v", bucketUrl, err)
+			// <-concurrenceControl
+			// return
+		}
+		// 桶的总对象数
+		ch <- prometheus.MustNewConstMetric(numObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.NumObjects),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 通的总数据量
+		ch <- prometheus.MustNewConstMetric(size, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.Size),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的本地总对象数
+		ch <- prometheus.MustNewConstMetric(localAllocatedObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.LocalAllocatedObjects),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的本地总数据量
+		ch <- prometheus.MustNewConstMetric(localAllocatedSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.LocalAllocatedSize),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的转磁带对象数
+		ch <- prometheus.MustNewConstMetric(externalTapeObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalTapeObjects),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的转磁带数据量
+		ch <- prometheus.MustNewConstMetric(externalTapeSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalTapeSize),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的转光对象数
+		ch <- prometheus.MustNewConstMetric(externalGlacierObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalGlacierObjects),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的转光数据量
+		ch <- prometheus.MustNewConstMetric(externalGlacierSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.ExternalGlacierSize),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的取回光对象数
+		ch <- prometheus.MustNewConstMetric(restoreGlacierObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreGlacierObjects),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的取回光数据量
+		ch <- prometheus.MustNewConstMetric(restoreGlacierSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreGlacierSize),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的取回磁带对象数
+		ch <- prometheus.MustNewConstMetric(restoreTapeObjects, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreTapeObjects),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// 桶的取回磁带数据量
+		ch <- prometheus.MustNewConstMetric(restoreTapeSize, prometheus.GaugeValue, float64(bucketData.Usage.RgwMain.RestoreTapeSize),
+			bucketData.Bid,
+			bucketData.Bucket,
+			bucketData.Owner,
+		)
+		// <-concurrenceControl
+		// }(bucketUrl)
 		// logrus.Debugf("桶计数：%v\n", index)
 		// if index > 200 {
 		// 	break

@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"sync"
 
 	"github.com/DesistDaydream/prometheus-instrumenting/pkg/scraper"
 	"github.com/prometheus/client_golang/prometheus"
@@ -84,52 +83,52 @@ func (ScrapeUsers) Scrape(client scraper.CommonClient, ch chan<- prometheus.Metr
 	// 全部用户总数
 	ch <- prometheus.MustNewConstMetric(userTotalCount, prometheus.GaugeValue, float64(usersListData.Count))
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
+	// var wg sync.WaitGroup
+	// defer wg.Wait()
 
 	// 用来控制并发数量
-	concurrenceControl := make(chan bool, 10)
+	// concurrenceControl := make(chan bool, 10)
 
 	for _, userName := range usersListData.Keys {
-		concurrenceControl <- true
-		wg.Add(1)
+		// concurrenceControl <- true
+		// wg.Add(1)
 		userUrl := "/api/rgw/user/" + userName
 		userMethod := "GET"
-		go func(userUrl string) {
-			defer wg.Done()
-			var userData user
-			respBodyUser, err := client.Request(userMethod, userUrl, nil)
-			if err != nil {
-				logrus.Errorf("获取 %v 用户数据失败，原因:%v", userUrl, err)
-				<-concurrenceControl
-				return
-			}
-			err = json.Unmarshal(respBodyUser, &userData)
-			if err != nil {
-				logrus.Errorf("解析 %v 用户数据失败，原因:%v", userUrl, err)
-				<-concurrenceControl
-				return
-			}
-			// 用户的总请求
-			if len(userData.Summary) > 0 && len(userData.Keys) > 0 {
-				ch <- prometheus.MustNewConstMetric(userTotalOps, prometheus.GaugeValue, float64(userData.Summary[0].Total.Ops),
-					userData.Keys[0].User,
-				)
-				// 用户总的成功请求数
-				ch <- prometheus.MustNewConstMetric(userTotalSuccessfulOps, prometheus.GaugeValue, float64(userData.Summary[0].Total.SuccessfulOps),
-					userData.Keys[0].User,
-				)
-				// 用户总对象数
-				ch <- prometheus.MustNewConstMetric(userTotalEntries, prometheus.GaugeValue, float64(userData.Summary[0].Total.TotalEntries),
-					userData.Keys[0].User,
-				)
-				// 用户总数据量
-				ch <- prometheus.MustNewConstMetric(userTotalBytes, prometheus.GaugeValue, float64(userData.Summary[0].Total.TotalBytes),
-					userData.Keys[0].User,
-				)
-				<-concurrenceControl
-			}
-		}(userUrl)
+		// go func(userUrl string) {
+		// defer wg.Done()
+		var userData user
+		respBodyUser, err := client.Request(userMethod, userUrl, nil)
+		if err != nil {
+			logrus.Errorf("获取 %v 用户数据失败，原因:%v", userUrl, err)
+			// <-concurrenceControl
+			// return
+		}
+		err = json.Unmarshal(respBodyUser, &userData)
+		if err != nil {
+			logrus.Errorf("解析 %v 用户数据失败，原因:%v", userUrl, err)
+			// <-concurrenceControl
+			// return
+		}
+		// 用户的总请求
+		if len(userData.Summary) > 0 && len(userData.Keys) > 0 {
+			ch <- prometheus.MustNewConstMetric(userTotalOps, prometheus.GaugeValue, float64(userData.Summary[0].Total.Ops),
+				userData.Keys[0].User,
+			)
+			// 用户总的成功请求数
+			ch <- prometheus.MustNewConstMetric(userTotalSuccessfulOps, prometheus.GaugeValue, float64(userData.Summary[0].Total.SuccessfulOps),
+				userData.Keys[0].User,
+			)
+			// 用户总对象数
+			ch <- prometheus.MustNewConstMetric(userTotalEntries, prometheus.GaugeValue, float64(userData.Summary[0].Total.TotalEntries),
+				userData.Keys[0].User,
+			)
+			// 用户总数据量
+			ch <- prometheus.MustNewConstMetric(userTotalBytes, prometheus.GaugeValue, float64(userData.Summary[0].Total.TotalBytes),
+				userData.Keys[0].User,
+			)
+			// <-concurrenceControl
+		}
+		// }(userUrl)
 		// logrus.Debugf("用户计数:%v\n", index)
 		// if index > 20 {
 		// 	break
