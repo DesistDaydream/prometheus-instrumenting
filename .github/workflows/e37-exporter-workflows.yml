@@ -22,10 +22,15 @@ jobs:
       #   uses: docker/metadata-action@v1
       #   with:
       #     images: ghcr.io/desistdaydream/e37-exporter
+      # 导出 tags 版本信息
+      - name: Extract Version
+        id: version_step
+        run: |
+          echo "##[set-output name=version;]VERSION=${cat cmd/e37_exporter/VERSION}"
       - name: 构建并推送容器镜像
         uses: docker/build-push-action@v2
         with:
           context: .
           file: cmd/e37_exporter/Dockerfile
           push: true
-          tags: docker.io/lchdzh/e37-exporter:v1.0.0
+          tags: docker.io/lchdzh/e37-exporter:${{steps.version_step.outputs.version}}
