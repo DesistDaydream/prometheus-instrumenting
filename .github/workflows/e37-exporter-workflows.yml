@@ -23,8 +23,8 @@ jobs:
       #   with:
       #     images: ghcr.io/desistdaydream/e37-exporter
       # 导出 tags 版本信息
-      - name: Extract Version
-        id: version_step
+      - name: 提取版本信息
+        id: extract_version
         run: |
           echo "##[set-output name=version;]$(cat cmd/e37_exporter/VERSION)"
       - name: 构建并推送容器镜像
@@ -33,4 +33,4 @@ jobs:
           context: .
           file: cmd/e37_exporter/Dockerfile
           push: true
-          tags: docker.io/lchdzh/e37-exporter:${{steps.version_step.outputs.version}}
+          tags: docker.io/lchdzh/e37-exporter:${{steps.extract_version.outputs.version}}
