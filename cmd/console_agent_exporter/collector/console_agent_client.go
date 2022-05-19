@@ -69,9 +69,9 @@ func NewConsoleAgentClient(opts *ConsoleAgentOpts) *ConsoleAgentClient {
 }
 
 // Request 建立与 ConsoleAgent 的连接，并返回 Response Body
-func (g *ConsoleAgentClient) Request(method string, endpoint string, reqBody io.Reader) (data []byte, err error) {
+func (c *ConsoleAgentClient) Request(method string, endpoint string, reqBody io.Reader) (data []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 ConsoleAgent 的连接，并返回 Body 给每个 Metric 采集器
-	urls := g.Opts.URL + endpoint
+	urls := c.Opts.URL + endpoint
 
 	// 创建一个新的 Request
 	req, err := http.NewRequest(method, urls, reqBody)
@@ -82,7 +82,7 @@ func (g *ConsoleAgentClient) Request(method string, endpoint string, reqBody io.
 	// 为 HTTP Request 设置 Header 参数
 	// 由于要并发建立多个请求，所有请求头里的时间戳会变化，所以每个请求都要分配一块内存空间来存放数据。
 	// 如果不是因为这个原因，可以直接把请求头的信息，直接写道 ConsoleAgentOpts 结构体中。
-	r := g.NewReqHeaderValues()
+	r := c.NewReqHeaderValues()
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("appkey", r.Appkey)
 	req.Header.Set("stime", r.Stimestamp)
@@ -93,7 +93,7 @@ func (g *ConsoleAgentClient) Request(method string, endpoint string, reqBody io.
 
 	// 根据新建立的 Request，发起请求，并获取 Response
 	var resp *http.Response
-	if resp, err = g.Client.Do(req); err != nil {
+	if resp, err = c.Client.Do(req); err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -122,14 +122,14 @@ func (g *ConsoleAgentClient) Request(method string, endpoint string, reqBody io.
 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，通过控制台验证和ConsoleAgent的连接
-func (g *ConsoleAgentClient) Ping() (b bool, err error) {
+func (c *ConsoleAgentClient) Ping() (b bool, err error) {
 	logrus.Debugf("每次从 ConsoleAgent 并发抓取指标之前，先检查一下目标状态")
-	req, err := http.NewRequest("GET", g.Opts.URL+"/api/actuator/health", nil)
+	req, err := http.NewRequest("GET", c.Opts.URL+"/api/actuator/health", nil)
 	if err != nil {
 		return false, err
 	}
 
-	resp, err := g.Client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -151,10 +151,10 @@ type reqHeaderValues struct {
 }
 
 // NewReqHeaderValues 生成请求头的内容
-func (g *ConsoleAgentClient) NewReqHeaderValues() *reqHeaderValues {
+func (c *ConsoleAgentClient) NewReqHeaderValues() *reqHeaderValues {
 	// 接入渠道标识
 	appkey := "wo-obs"
-	secretKey := g.Opts.SecretKey
+	secretKey := c.Opts.SecretKey
 	// 毫秒时间戳
 	stimestamp := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
 	// 随机字符串
@@ -189,9 +189,14 @@ func (g *ConsoleAgentClient) NewReqHeaderValues() *reqHeaderValues {
 	}
 }
 
+func (c *ConsoleAgentClient) GetConcurrency() int {
+	return c.Opts.Concurrency
+}
+
 // ConsoleAgentOpts 登录 ConsoleAgent 所需属性
 type ConsoleAgentOpts struct {
-	URL string
+	URL         string
+	Concurrency int
 	//http.Client的选项
 	Timeout   time.Duration
 	Insecure  bool
@@ -201,6 +206,7 @@ type ConsoleAgentOpts struct {
 // AddFlag use after set Opts
 func (o *ConsoleAgentOpts) AddFlag() {
 	pflag.StringVar(&o.URL, "console-agent-server", "http://172.38.40.210:9097", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)")
+	pflag.IntVar(&o.Concurrency, "concurrency", 10, "Number of concurrency requests during collection.")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*60000, "Timeout on HTTP requests to the Gdas-Proxy.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 	pflag.StringVar(&o.SecretKey, "secret-key", "obs123456", "Set Http Request Header SecretKey.")

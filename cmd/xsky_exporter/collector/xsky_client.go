@@ -128,9 +128,9 @@ func NewXsykClient(opts *XskyOpts) *XskyClient {
 }
 
 // Request 建立与 Xsky 的连接，并返回 Response Body
-func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
+func (c *XskyClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 Xsky 的连接，并返回 Body 给每个 Metric 采集器
-	url := x.Opts.URL + endpoint
+	url := c.Opts.URL + endpoint
 	logrus.Debugf("request url %s", url)
 
 	// 创建一个新的 Request
@@ -139,12 +139,12 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(x.Opts.Username, x.Opts.password)
+	req.SetBasicAuth(c.Opts.Username, c.Opts.password)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("Xms-Auth-Token", x.Token)
+	req.Header.Set("Xms-Auth-Token", c.Token)
 
 	// 根据新建立的 Request，发起请求，并获取 Response
-	resp, err := x.Client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -165,28 +165,28 @@ func (x *XskyClient) Request(method string, endpoint string, reqBody io.Reader) 
 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
-func (x *XskyClient) Ping() (b bool, err error) {
+func (c *XskyClient) Ping() (b bool, err error) {
 	logrus.Debugf("每次从 Xsky 并发抓取指标之前，先检查一下目标状态")
 	// 判断是否有 Token
-	if x.Token == "" {
+	if c.Token == "" {
 		logrus.Debugf("Token 为空，开始尝试获取 Token")
-		x.Token, err = GetToken(x.Opts)
+		c.Token, err = GetToken(c.Opts)
 		if err == nil {
 			return true, nil
 		}
 		return false, err
 	}
-	logrus.Debugf("Xsky Token 为: %s", x.Token)
+	logrus.Debugf("Xsky Token 为: %s", c.Token)
 
 	// TODO 还需要添加一个认证，当 Token 失效时，也需要重新获取 Token，可以直接
-	logrus.Debugf("Ping Request url %s", x.Opts.URL+"/health")
-	req, err := http.NewRequest("GET", x.Opts.URL+"/health", nil)
+	logrus.Debugf("Ping Request url %s", c.Opts.URL+"/health")
+	req, err := http.NewRequest("GET", c.Opts.URL+"/health", nil)
 	if err != nil {
 		return false, err
 	}
-	req.SetBasicAuth(x.Opts.Username, x.Opts.password)
+	req.SetBasicAuth(c.Opts.Username, c.Opts.password)
 
-	resp, err := x.Client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -203,11 +203,16 @@ func (x *XskyClient) Ping() (b bool, err error) {
 	}
 }
 
+func (c *XskyClient) GetConcurrency() int {
+	return c.Opts.Concurrency
+}
+
 // XskyOpts 登录 Xsky 所需属性
 type XskyOpts struct {
-	URL      string
-	Username string
-	password string
+	URL         string
+	Username    string
+	password    string
+	Concurrency int
 	// 这俩是关于 http.Client 的选项
 	Timeout  time.Duration
 	Insecure bool
@@ -218,6 +223,7 @@ func (o *XskyOpts) AddFlag() {
 	pflag.StringVar(&o.URL, "xsky-server", "http://10.20.5.98:8056", "HTTP API address of a Xsky server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "xsky-user", "admin", "xsky username")
 	pflag.StringVar(&o.password, "xsky-pass", "", "xsky password")
+	pflag.IntVar(&o.Concurrency, "concurrency", 10, "Number of concurrency requests during collection.")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the Xsky API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

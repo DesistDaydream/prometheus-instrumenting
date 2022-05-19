@@ -36,7 +36,7 @@ func Name() string {
 // GetToken 获取 Gdas 认证所需 Token
 func GetToken(opts *GdasOpts) (token string, err error) {
 	// 设置 json 格式的 request body
-	jsonReqBody := []byte("{\"userName\":\"" + opts.Username + "\",\"passWord\":\"" + opts.password + "\"}")
+	jsonReqBody := []byte("{\"userName\":\"" + opts.Username + "\",\"passWord\":\"" + opts.Password + "\"}")
 	// 设置 URL
 	url := fmt.Sprintf("%v/v1/login", opts.URL)
 	// 设置 Request 信息
@@ -141,31 +141,31 @@ func NewGdasClient(opts *GdasOpts) *GdasClient {
 }
 
 // Request 建立与 Gdas 的连接，并返回 Response Body
-func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
+func (c *GdasClient) Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error) {
 	// 根据认证信息及 endpoint 参数，创建与 Gdas 的连接，并返回 Body 给每个 Metric 采集器
-	url := g.Opts.URL + endpoint
+	url := c.Opts.URL + endpoint
 	logrus.WithFields(logrus.Fields{
 		"url":    url,
 		"method": method,
 	}).Debugf("抓取指标时的请求URL")
 
-	randString, signatureSha := generateSign(g.Token)
+	randString, signatureSha := generateSign(c.Token)
 
 	// 创建一个新的 Request
 	req, err := http.NewRequest(method, url, reqBody)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(g.Opts.Username, g.Opts.password)
+	req.SetBasicAuth(c.Opts.Username, c.Opts.Password)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("token", g.Token)
+	req.Header.Set("token", c.Token)
 	req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
 	req.Header.Set("nonce", randString)
 	req.Header.Set("signature", signatureSha)
-	req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
+	req.Header.Set("Referer", fmt.Sprintf("%v/gdas", c.Opts.URL))
 
 	// 根据新建立的 Request，发起请求，并获取 Response
-	resp, err := g.Client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -189,16 +189,16 @@ func (g *GdasClient) Request(method string, endpoint string, reqBody io.Reader) 
 
 // Ping 在 Scraper 接口的实现方法 scrape() 中调用。
 // 让 Exporter 每次获取数据时，都检验一下目标设备通信是否正常
-func (g *GdasClient) Ping() (b bool, err error) {
+func (c *GdasClient) Ping() (b bool, err error) {
 	// 判断 TOKEN 是否可用
-	url := g.Opts.URL + "/v1/nodeList"
+	url := c.Opts.URL + "/v1/nodeList"
 	method := "GET"
 	logrus.WithFields(logrus.Fields{
 		"url":    url,
 		"method": method,
 	}).Debugf("每次从 Gdas 并发抓取指标之前，先检查一下目标状态")
 
-	randString, signatureSha := generateSign(g.Token)
+	randString, signatureSha := generateSign(c.Token)
 
 	// 创建一个新的 Request
 	req, err := http.NewRequest(method, url, nil)
@@ -206,14 +206,14 @@ func (g *GdasClient) Ping() (b bool, err error) {
 		return false, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("token", g.Token)
+	req.Header.Set("token", c.Token)
 	req.Header.Set("stime", fmt.Sprintf("%v", time.Now().UnixNano()/1e6))
 	req.Header.Set("nonce", randString)
 	req.Header.Set("signature", signatureSha)
-	req.Header.Set("Referer", fmt.Sprintf("%v/gdas", g.Opts.URL))
+	req.Header.Set("Referer", fmt.Sprintf("%v/gdas", c.Opts.URL))
 
 	// 根据新建立的 Request，发起请求，并获取 Response
-	resp, err := g.Client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -224,13 +224,13 @@ func (g *GdasClient) Ping() (b bool, err error) {
 		return true, nil
 	case resp.StatusCode == http.StatusUnauthorized:
 		fmt.Printf("认证检查失败，状态码为：%v,尝试重新获取 Token\n", resp.Status)
-		if g.Token, err = GetToken(g.Opts); err != nil {
+		if c.Token, err = GetToken(c.Opts); err != nil {
 			return false, err
 		}
 		return true, nil
 	default:
 		fmt.Println("检查失败，状态码为：", resp.Status)
-		g.Token, err = GetToken(g.Opts)
+		c.Token, err = GetToken(c.Opts)
 		if err != nil {
 			return false, fmt.Errorf("error handling request, http-statuscode: %s,http-ResponseBody：%s", resp.Status, resp.Body)
 		}
@@ -238,11 +238,16 @@ func (g *GdasClient) Ping() (b bool, err error) {
 	}
 }
 
+func (c *GdasClient) GetConcurrency() int {
+	return c.Opts.Concurrency
+}
+
 // GdasOpts 登录 Gdas 所需属性
 type GdasOpts struct {
-	URL      string
-	Username string
-	password string
+	URL         string
+	Username    string
+	Password    string
+	Concurrency int
 	// 这俩是关于 http.Client 的选项
 	Timeout  time.Duration
 	Insecure bool
@@ -252,7 +257,8 @@ type GdasOpts struct {
 func (o *GdasOpts) AddFlag() {
 	pflag.StringVar(&o.URL, "gdas-server", "https://172.38.30.193:8003", "HTTP API address of a Gdas server or agent. (prefix with https:// to connect over HTTPS)")
 	pflag.StringVar(&o.Username, "gdas-user", "system", "gdas username")
-	pflag.StringVar(&o.password, "gdas-pass", "", "gdas password")
+	pflag.StringVar(&o.Password, "gdas-pass", "", "gdas password")
+	pflag.IntVar(&o.Concurrency, "concurrent", 10, "Number of concurrent requests during collection.")
 	pflag.DurationVar(&o.Timeout, "time-out", time.Millisecond*1600, "Timeout on HTTP requests to the Gads API.")
 	pflag.BoolVar(&o.Insecure, "insecure", true, "Disable TLS host verification.")
 }

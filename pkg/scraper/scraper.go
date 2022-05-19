@@ -32,4 +32,6 @@ type CommonClient interface {
 	Request(method string, endpoint string, reqBody io.Reader) (body []byte, err error)
 	// Ping 每次获取 Metric 时，都会执行健康检查，检查 Server 端是否健康
 	Ping() (bool, error)
+	// GetConcurrency 获取当前 Server 的并发数
+	GetConcurrency() int
 }
