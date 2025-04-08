@@ -71,6 +71,8 @@ func main() {
 	// 第一种：实例化一个新注册器，用来注册 自定义Metrics
 	// 使用 HandlerFor 将自己定义的已注册的 Metrics 作为参数，以便可以通过 http 获取 metric 信息
 	reg := prometheus.NewRegistry()
+	// 可以看到 MustRegister() 需要指定 Collector 接口作为参数
+	// 所以我们的 m 也必须要实现 Collecor 接口的两个方法，以便注册完成后，prometheus 库可以直接调用我们设计的这俩方法的行为进行后续操作
 	reg.MustRegister(m)
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	//

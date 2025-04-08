@@ -2,18 +2,22 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 )
 
 var ctx = context.Background()
 
-// 示例 1: 即时向量查询
+// /query 即时向量查询
 func InstantVectorQuery(promAPI v1.API) {
 	result, warnings, err := promAPI.Query(ctx, "up", time.Now())
 	if err != nil {
@@ -28,7 +32,7 @@ func InstantVectorQuery(promAPI v1.API) {
 	fmt.Println(result)
 }
 
-// 示例 2: 范围向量查询
+// /query_range 范围向量查询
 func RangeVectorQuery(promAPI v1.API, startTime time.Time, endTime time.Time, step time.Duration) {
 	rangeResult, warnings, err := promAPI.QueryRange(ctx, `rate(node_cpu_seconds_total{mode="system",cpu="0"}[5m])`, v1.Range{
 		Start: startTime,
@@ -56,7 +60,7 @@ func RangeVectorQuery(promAPI v1.API, startTime time.Time, endTime time.Time, st
 	}
 }
 
-// 示例 3: 查询指标标签
+// /labels 查询指标标签
 func LabelNamesQuery(promAPI v1.API, startTime time.Time, endTime time.Time) {
 	labelNames, warnings, err := promAPI.LabelNames(ctx, []string{`up`}, startTime, endTime)
 	if err != nil {
@@ -70,6 +74,7 @@ func LabelNamesQuery(promAPI v1.API, startTime time.Time, endTime time.Time) {
 	fmt.Println(labelNames)
 }
 
+// /metadata 查询指标元数据
 func metaDataQuery(promAPI v1.API) {
 	metadata, err := promAPI.Metadata(ctx, "", "")
 	if err != nil {
@@ -77,15 +82,32 @@ func metaDataQuery(promAPI v1.API) {
 	}
 
 	fmt.Println("######## 列出所有指标名称 ########")
-	for metric := range metadata {
-		fmt.Printf("- %s\n", metric)
+	for metricName, metricMetadata := range metadata {
+		fmt.Println(metricName)
+		fmt.Println(metricMetadata)
 	}
 }
 
 func main() {
+	roundTripper := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+
 	// 创建 Prometheus API 客户端配置
+	// 客户端使用 RoundTripper 来驱动 HTTP 请求。如果未提供，则将使用 DefaultRoundTripper
 	config := api.Config{
-		Address: "http://192.168.254.253:9090", // Prometheus 服务器地址，根据实际情况修改
+		Address: "https://prometheus.102205.xyz:10443",
+		RoundTripper: config.NewBasicAuthRoundTripper(
+			config.NewInlineSecret("admin"),
+			config.NewInlineSecret("admin"),
+			roundTripper,
+		),
 	}
 
 	// 实例化 Prom 客户端
