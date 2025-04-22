@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
+
+	logging "github.com/DesistDaydream/logging/pkg/logrus_init"
 
 	"github.com/DesistDaydream/prometheus-instrumenting/cmd/xsky_exporter/collector"
 	"github.com/DesistDaydream/prometheus-instrumenting/pkg/scraper"
 	"github.com/coreos/go-systemd/daemon"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -35,28 +35,9 @@ var scrapers = map[scraper.CommonScraper]bool{
 	// ScrapeRegistries{}:  false,
 }
 
-// LogInit 日志功能初始化，若指定了 log-output 命令行标志，则将日志写入到文件中
-func LogInit(level, file string) error {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-	})
-	le, err := logrus.ParseLevel(level)
-	if err != nil {
-		return err
-	}
-	logrus.SetLevel(le)
-
-	if file != "" {
-		f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE, 0755)
-		if err != nil {
-			return err
-		}
-		logrus.SetOutput(f)
-	}
-
-	return nil
-}
+var (
+	logFlags logging.LogrusFlags
+)
 
 func main() {
 	// 设置通用包中的指标的前缀
@@ -67,8 +48,8 @@ func main() {
 	// ####################################
 	listenAddress := pflag.String("web.listen-address", ":18056", "Address to listen on for web interface and telemetry.")
 	metricsPath := pflag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
-	logLevel := pflag.String("log-level", "info", "The logging level:[debug, info, warn, error, fatal]")
-	logFile := pflag.String("log-output", "", "the file which log to, default stdout")
+
+	logging.AddFlags(&logFlags)
 
 	// 设置关于抓取 Metric 目标客户端的一些信息的标志
 	opts := &collector.XskyOpts{}
@@ -96,10 +77,9 @@ func main() {
 	// ####################################
 
 	// 初始化日志
-	if err := LogInit(*logLevel, *logFile); err != nil {
-		logrus.Fatal(errors.Wrap(err, "set log level error"))
+	if err := logging.LogrusInit(&logFlags); err != nil {
+		logrus.Fatal("初始化日志失败", err)
 	}
-
 	// ######## 下面的都是 Exporter 运行的最主要逻辑了 ########
 	// 获取所有通过命令行标志，设置开启的 scrapers(抓取器)。
 	// 不包含默认开启的，默认开启的在代码中已经指定了。

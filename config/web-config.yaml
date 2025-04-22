@@ -1,6 +1,6 @@
 # tls_server_config:
-#   cert_file: datalake.cn.pem
-#   key_file: datalake.cn.key
+#   cert_file: desistdaydream.cn.pem
+#   key_file: desistdaydream.cn.key
 
 # admin/DesistDaydream
 basic_auth_users:

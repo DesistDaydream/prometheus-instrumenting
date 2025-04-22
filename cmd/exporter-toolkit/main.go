@@ -9,7 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promslog"
 
 	"github.com/prometheus/exporter-toolkit/web"
 )
@@ -50,25 +50,28 @@ func (ms *HelloWorldMetrics) Collect(ch chan<- prometheus.Metric) {
 }
 
 func main() {
+	// Prometheus 的 客户端库 提供了一个用于日志功能的库
+	promslogConfig := &promslog.Config{}
+	logger := promslog.New(promslogConfig)
+
 	m := NewHelloWorldMetrics()
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(m)
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 
-	// 利用 exporter-toolkit 实现 web 能力
 	srv := &http.Server{}
 
 	addr := []string{":8080"}
 	isSocket := false
 	configFile := "config/web-config.yaml"
+	// 利用 exporter-toolkit 实现 web 能力
+	// prometheus/exporter-toolkit 项目是一个工具包，可以帮助开发者实现基本的 Web 能力。
+	// e.g. HTTPS, Basic Auth, etc. 都封装在 exporter-toolkit 可以直接调用
 	webFlags := &web.FlagConfig{
 		WebListenAddresses: &addr,
 		WebSystemdSocket:   &isSocket,
 		WebConfigFile:      &configFile,
 	}
-
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 
 	if err := web.ListenAndServe(srv, webFlags, logger); err != nil {
 		fmt.Println(err)
